@@ -3,31 +3,67 @@
 import React, { useState } from 'react';
 import { Bell, User, FileText, Phone, MapPin, Plus, CheckCircle, Users } from 'lucide-react';
 
-const SalesWorkflowSystem = () => {
-  const [currentUser, setCurrentUser] = useState('salesperson');
-  const [customers, setCustomers] = useState<any[]>([]);
-  const [notifications, setNotifications] = useState<any[]>([]);
-  const [showNewCustomerForm, setShowNewCustomerForm] = useState(false);
-  const [showArchived, setShowArchived] = useState(false);
+interface Customer {
+  id: number;
+  name: string;
+  address: string;
+  phone: string;
+  files: FileInfo[];
+  status: string;
+  createdBy: string;
+  createdAt: string;
+  notes: string;
+  inHouseNotes: string;
+  archivedAt?: string;
+}
+
+interface Notification {
+  id: number;
+  message: string;
+  targetUser: string;
+  timestamp: string;
+  read: boolean;
+}
+
+interface FileInfo {
+  name: string;
+  type: string;
+}
+
+const VattenmiljoCRM = () => {
+  const [currentUser, setCurrentUser] = useState<string>('salesperson');
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [showNewCustomerForm, setShowNewCustomerForm] = useState<boolean>(false);
+  const [showArchived, setShowArchived] = useState<boolean>(false);
+  
+  // Counter for unique IDs
+  const [nextId, setNextId] = useState<number>(1);
   
   // Form state
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string;
+    address: string;
+    phone: string;
+    files: FileInfo[];
+  }>({
     name: '',
     address: '',
     phone: '',
-    files: [] as any[]
+    files: []
   });
 
   // Add notification
   const addNotification = (message: string, targetUser: string) => {
-    const notification = {
-      id: Date.now(),
+    const notification: Notification = {
+      id: nextId,
       message,
       targetUser,
       timestamp: new Date().toLocaleTimeString(),
       read: false
     };
     setNotifications(prev => [...prev, notification]);
+    setNextId(prev => prev + 1);
   };
 
   // Create new customer card
@@ -37,8 +73,8 @@ const SalesWorkflowSystem = () => {
       return;
     }
 
-    const newCustomer = {
-      id: Date.now(),
+    const newCustomer: Customer = {
+      id: nextId,
       name: formData.name,
       address: formData.address,
       phone: formData.phone,
@@ -53,6 +89,7 @@ const SalesWorkflowSystem = () => {
     setCustomers(prev => [...prev, newCustomer]);
     setFormData({ name: '', address: '', phone: '', files: [] });
     setShowNewCustomerForm(false);
+    setNextId(prev => prev + 1);
   };
 
   // Update customer status
@@ -67,9 +104,9 @@ const SalesWorkflowSystem = () => {
         
         // Trigger notifications based on status change
         if (newStatus === 'sales') {
-          addNotification(`New sale from ${customer.name} - needs in-house processing`, 'inhouse');
+          addNotification(`Ny försäljning från ${customer.name} - behöver intern bearbetning`, 'inhouse');
         } else if (newStatus === 'done') {
-          addNotification(`Customer ${customer.name} ready for installation`, 'installer');
+          addNotification(`Kund ${customer.name} redo för installation`, 'installer');
         }
         
         return updatedCustomer;
@@ -90,9 +127,10 @@ const SalesWorkflowSystem = () => {
   // Simulate file upload
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
+    const newFiles: FileInfo[] = files.map(file => ({ name: file.name, type: file.type }));
     setFormData(prev => ({
       ...prev,
-      files: [...prev.files, ...files.map(file => ({ name: file.name, type: file.type }))]
+      files: [...prev.files, ...newFiles]
     }));
   };
 
@@ -135,8 +173,8 @@ const SalesWorkflowSystem = () => {
     switch (status) {
       case 'not_handled': return 'Not Handled';
       case 'meeting': return 'Meeting';
-      case 'sales': return 'Sales';
-      case 'done': return 'Done';
+      case 'sales': return 'Sale';
+      case 'done': return 'Ready';
       case 'archived': return 'Archived';
       default: return status;
     }
@@ -162,9 +200,9 @@ const SalesWorkflowSystem = () => {
                   onChange={(e) => setCurrentUser(e.target.value)}
                   className="border border-gray-300 rounded-md px-3 py-1 text-sm"
                 >
-                  <option value="salesperson">Salesperson</option>
-                  <option value="inhouse">In-House Staff</option>
-                  <option value="installer">Installer</option>
+                  <option value="salesperson">Säljare</option>
+                  <option value="inhouse">Intern Personal</option>
+                  <option value="installer">Montör</option>
                 </select>
               </div>
               
@@ -188,7 +226,7 @@ const SalesWorkflowSystem = () => {
           <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
             <h3 className="text-lg font-medium text-blue-900 mb-3 flex items-center">
               <Bell className="h-5 w-5 mr-2" />
-              Notifications ({userNotifications.length})
+              Notifieringar ({userNotifications.length})
             </h3>
             <div className="space-y-2">
               {userNotifications.map(notification => (
@@ -204,11 +242,7 @@ const SalesWorkflowSystem = () => {
         {/* Action Buttons */}
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center space-x-4">
-            <h2 className="text-2xl font-bold text-gray-900">
-              {currentUser === 'salesperson' && (showArchived ? 'Archived Customers' : 'Active Customers')}
-              {currentUser === 'inhouse' && 'Sales Processing'}
-              {currentUser === 'installer' && 'Installation Queue'}
-            </h2>
+            <h2 className="text-2xl font-bold text-gray-900">Customer Management</h2>
             
             {currentUser === 'salesperson' && (
               <button
@@ -285,7 +319,7 @@ const SalesWorkflowSystem = () => {
                   />
                   {formData.files.length > 0 && (
                     <div className="mt-2 space-y-1">
-                      {formData.files.map((file, index) => (
+                      {formData.files.map((file: FileInfo, index: number) => (
                         <div key={index} className="text-sm text-gray-600 flex items-center">
                           <FileText className="h-4 w-4 mr-1" />
                           {file.name}
@@ -344,7 +378,7 @@ const SalesWorkflowSystem = () => {
                 <div className="mb-4">
                   <h4 className="text-sm font-medium text-gray-700 mb-2">Attachments</h4>
                   <div className="space-y-1">
-                    {customer.files.map((file: any, index: number) => (
+                    {customer.files.map((file: FileInfo, index: number) => (
                       <div key={index} className="flex items-center text-sm text-gray-600">
                         <FileText className="h-4 w-4 mr-2" />
                         {file.name}
@@ -363,7 +397,7 @@ const SalesWorkflowSystem = () => {
                     onChange={(e) => updateNotes(customer.id, e.target.value)}
                     className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
                     rows={3}
-                    placeholder="Add any necessary information..."
+                    placeholder="Add necessary information..."
                   />
                 </div>
               )}
@@ -395,12 +429,12 @@ const SalesWorkflowSystem = () => {
                       onClick={() => updateStatus(customer.id, 'meeting')}
                       className="flex-1 bg-yellow-600 text-white px-3 py-2 rounded text-sm hover:bg-yellow-700"
                     >
-                      Schedule Meeting
+                      Book Meeting
                     </button>
                     <button
                       onClick={() => updateStatus(customer.id, 'archived')}
                       className="px-3 py-2 bg-gray-500 text-white rounded text-sm hover:bg-gray-600"
-                      title="Archive (No Sale)"
+                      title="Archive (No sale)"
                     >
                       Archive
                     </button>
@@ -418,7 +452,7 @@ const SalesWorkflowSystem = () => {
                     <button
                       onClick={() => updateStatus(customer.id, 'archived')}
                       className="px-3 py-2 bg-gray-500 text-white rounded text-sm hover:bg-gray-600"
-                      title="Archive (No Sale)"
+                      title="Archive (No sale)"
                     >
                       Archive
                     </button>
@@ -431,7 +465,7 @@ const SalesWorkflowSystem = () => {
                     className="flex-1 bg-green-600 text-white px-3 py-2 rounded text-sm hover:bg-green-700 flex items-center justify-center"
                   >
                     <CheckCircle className="h-4 w-4 mr-1" />
-                    Mark Done
+                    Mark Ready
                   </button>
                 )}
               </div>
@@ -457,5 +491,5 @@ const SalesWorkflowSystem = () => {
 };
 
 export default function Home() {
-  return <SalesWorkflowSystem />;
+  return <VattenmiljoCRM />;
 }
