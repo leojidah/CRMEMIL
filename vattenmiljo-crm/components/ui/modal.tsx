@@ -119,7 +119,7 @@ const Portal: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
 // Note: In a real implementation, you'd import ReactDOM from 'react-dom'
 // For this example, we'll assume it's available or use a fallback
-const ReactDOM = (globalThis as any).ReactDOM || {
+const ReactDOM = (globalThis as typeof globalThis & { ReactDOM?: typeof import('react-dom') }).ReactDOM || {
   createPortal: (children: React.ReactNode) => children
 };
 
@@ -662,13 +662,7 @@ export const Drawer: React.FC<DrawerProps> = ({
 
 // ============================================================================
 // EXPORTS
+// DEFAULT EXPORT
 // ============================================================================
 
-export {
-  Modal as default,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  ConfirmModal,
-  Drawer
-};
+export default Modal;

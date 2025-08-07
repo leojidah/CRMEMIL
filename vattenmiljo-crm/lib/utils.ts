@@ -10,7 +10,8 @@ import type {
     CustomerActivity,
     FilterState,
     SortState,
-    NotificationType
+    NotificationType,
+    Permission
   } from './types';
   import { CUSTOMER_STATUS_CONFIG, USER_ROLE_CONFIG, ROLE_PERMISSIONS } from './constants';
   
@@ -148,7 +149,7 @@ import type {
    */
   export function toTitleCase(str: string): string {
     return str.replace(/\w\S*/g, (txt) => 
-      txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase()
+      txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase()
     );
   }
   
@@ -340,15 +341,17 @@ import type {
    */
   export function sortCustomers(customers: Customer[], sort: SortState): Customer[] {
     return [...customers].sort((a, b) => {
-      let aValue: any;
-      let bValue: any;
+      let aValue: string | number | Date | undefined;
+      let bValue: string | number | Date | undefined;
       
       if (sort.field === 'createdAt' || sort.field === 'updatedAt') {
         aValue = new Date(a[sort.field]).getTime();
         bValue = new Date(b[sort.field]).getTime();
       } else {
-        aValue = a[sort.field as keyof Customer];
-        bValue = b[sort.field as keyof Customer];
+        const aFieldValue = a[sort.field as keyof Customer];
+        const bFieldValue = b[sort.field as keyof Customer];
+        aValue = typeof aFieldValue === 'string' || typeof aFieldValue === 'number' ? aFieldValue : String(aFieldValue || '');
+        bValue = typeof bFieldValue === 'string' || typeof bFieldValue === 'number' ? bFieldValue : String(bFieldValue || '');
       }
       
       // Handle null/undefined values
@@ -377,7 +380,7 @@ import type {
     daysSinceLastActivity: number;
   } {
     const activities = customer.activities || [];
-    const recentActivity = activities.sort((a, b) => 
+    const recentActivity = activities.sort((a: CustomerActivity, b: CustomerActivity) => 
       new Date(b.performedAt).getTime() - new Date(a.performedAt).getTime()
     )[0];
     
@@ -407,7 +410,7 @@ import type {
    * Checks if user has specific permission
    */
   export function hasPermission(userRole: UserRole, permission: string): boolean {
-    return ROLE_PERMISSIONS[userRole]?.includes(permission as any) ?? false;
+    return ROLE_PERMISSIONS[userRole]?.includes(permission as Permission) ?? false;
   }
   
   /**
@@ -503,13 +506,13 @@ import type {
    * Generates a unique ID
    */
   export function generateId(): string {
-    return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
   }
   
   /**
    * Debounce function for search and other inputs
    */
-  export function debounce<T extends (...args: any[]) => any>(
+  export function debounce<T extends (...args: unknown[]) => unknown>(
     func: T,
     delay: number
   ): (...args: Parameters<T>) => void {
@@ -525,10 +528,10 @@ import type {
    */
   export function deepClone<T>(obj: T): T {
     if (obj === null || typeof obj !== 'object') return obj;
-    if (obj instanceof Date) return new Date(obj.getTime()) as any;
-    if (obj instanceof Array) return obj.map(item => deepClone(item)) as any;
+    if (obj instanceof Date) return new Date(obj.getTime()) as T;
+    if (obj instanceof Array) return obj.map(item => deepClone(item)) as T;
     if (typeof obj === 'object') {
-      const clonedObj = {} as any;
+      const clonedObj = {} as T;
       for (const key in obj) {
         if (obj.hasOwnProperty(key)) {
           clonedObj[key] = deepClone(obj[key]);
@@ -560,7 +563,7 @@ import type {
   /**
    * Checks if value is empty (null, undefined, empty string, empty array, empty object)
    */
-  export function isEmpty(value: any): boolean {
+  export function isEmpty(value: unknown): boolean {
     if (value == null) return true;
     if (typeof value === 'string') return value.trim() === '';
     if (Array.isArray(value)) return value.length === 0;

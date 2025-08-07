@@ -19,6 +19,19 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   children?: React.ReactNode;
 }
 
+export interface IconButtonProps extends Omit<ButtonProps, 'children' | 'icon'> {
+  icon: React.ReactNode;
+  'aria-label': string;
+  tooltip?: string;
+}
+
+export interface ButtonGroupProps extends React.HTMLAttributes<HTMLDivElement> {
+  children: React.ReactNode;
+  size?: ButtonProps['size'];
+  variant?: ButtonProps['variant'];
+  orientation?: 'horizontal' | 'vertical';
+}
+
 // ============================================================================
 // COMPONENT STYLES
 // ============================================================================
@@ -151,10 +164,10 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           'select-none touch-manipulation',
           
           // Size styles
-          buttonSizes[size],
+          buttonSizes[size].join(' '),
           
           // Variant styles
-          buttonVariants[variant],
+          buttonVariants[variant].join(' '),
           
           // Full width
           fullWidth && 'w-full',
@@ -212,14 +225,6 @@ Button.displayName = 'Button';
 // BUTTON GROUP COMPONENT
 // ============================================================================
 
-interface ButtonGroupProps {
-  children: React.ReactNode;
-  className?: string;
-  orientation?: 'horizontal' | 'vertical';
-  size?: ButtonProps['size'];
-  variant?: ButtonProps['variant'];
-}
-
 export const ButtonGroup: React.FC<ButtonGroupProps> = ({
   children,
   className,
@@ -239,16 +244,16 @@ export const ButtonGroup: React.FC<ButtonGroupProps> = ({
         orientation === 'vertical' && [
           '[&>button:first-child]:rounded-b-none [&>button:last-child]:rounded-t-none',
           '[&>button:not(:first-child):not(:last-child)]:rounded-none'
-        ],
+        ].join(' '),
         className
       )}
       role="group"
     >
       {React.Children.map(children, (child) => {
         if (React.isValidElement(child) && child.type === Button) {
-          return React.cloneElement(child, {
-            size: size || child.props.size,
-            variant: variant || child.props.variant,
+          return React.cloneElement(child as React.ReactElement<ButtonProps>, {
+            size: size || (child.props as ButtonProps).size,
+            variant: variant || (child.props as ButtonProps).variant,
           });
         }
         return child;
@@ -260,12 +265,6 @@ export const ButtonGroup: React.FC<ButtonGroupProps> = ({
 // ============================================================================
 // ICON BUTTON COMPONENT
 // ============================================================================
-
-interface IconButtonProps extends Omit<ButtonProps, 'children' | 'icon'> {
-  icon: React.ReactNode;
-  'aria-label': string;
-  tooltip?: string;
-}
 
 export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
   ({ icon, className, size = 'md', ...props }, ref) => {
@@ -343,6 +342,62 @@ export const FAB: React.FC<FABProps> = ({
       </span>
     </Button>
   );
+};
+
+// ============================================================================
+// ADDITIONAL BUTTON COMPONENTS
+// ============================================================================
+
+// CTA Button Component
+export const CTAButton = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ children, ...props }, ref) => (
+    <Button 
+      ref={ref}
+      variant="primary" 
+      size="lg"
+      {...props}
+    >
+      {children}
+    </Button>
+  )
+);
+CTAButton.displayName = 'CTAButton';
+
+// Link Button Component  
+export const LinkButton = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ children, ...props }, ref) => (
+    <Button 
+      ref={ref}
+      variant="ghost" 
+      {...props}
+    >
+      {children}
+    </Button>
+  )
+);
+LinkButton.displayName = 'LinkButton';
+
+// Loading Button Component
+export const LoadingButton = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ children, loading, ...props }, ref) => (
+    <Button 
+      ref={ref}
+      loading={loading}
+      {...props}
+    >
+      {children}
+    </Button>
+  )
+);
+LoadingButton.displayName = 'LoadingButton';
+
+// Button Icons Component
+export const ButtonIcons = {
+  loading: <span className="animate-spin">⟳</span>,
+  success: <span>✓</span>,
+  error: <span>✗</span>,
+  warning: <span>⚠</span>,
+  info: <span>ℹ</span>
 };
 
 // ============================================================================

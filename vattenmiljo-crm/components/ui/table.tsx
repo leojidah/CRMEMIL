@@ -9,11 +9,11 @@ import { cn } from '@/lib/utils';
 // TYPE DEFINITIONS
 // ============================================================================
 
-export interface Column<T = any> {
+export interface Column<T = unknown> {
   key: string;
   title: string;
   dataIndex?: string;
-  render?: (value: any, record: T, index: number) => React.ReactNode;
+  render?: (value: unknown, record: T, index: number) => React.ReactNode;
   sortable?: boolean;
   width?: string | number;
   align?: 'left' | 'center' | 'right';
@@ -22,7 +22,7 @@ export interface Column<T = any> {
   headerClassName?: string;
 }
 
-export interface TableProps<T = any> {
+export interface TableProps<T = unknown> {
   columns: Column<T>[];
   data: T[];
   loading?: boolean;
@@ -304,7 +304,7 @@ export const Pagination: React.FC<PaginationProps> = ({
 // MAIN TABLE COMPONENT
 // ============================================================================
 
-export const Table = <T extends Record<string, any>>({
+export const Table = <T extends Record<string, unknown>>({
   columns,
   data,
   loading = false,
@@ -678,10 +678,7 @@ const columns = [
 */
 
 // ============================================================================
-// EXPORTS
+// DEFAULT EXPORT
 // ============================================================================
 
-export {
-  Table as default,
-  Pagination
-};
+export default Table;

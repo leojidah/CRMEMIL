@@ -158,7 +158,7 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
           'transition-all duration-200 ease-out',
           
           // Variant styles
-          cardVariants[variant],
+          cardVariants[variant].join(' '),
           
           // Padding
           cardPadding[padding],
@@ -774,17 +774,7 @@ export const EmptyStateCard: React.FC<EmptyStateCardProps> = ({
 */
 
 // ============================================================================
-// EXPORTS
+// DEFAULT EXPORT
 // ============================================================================
 
-export {
-  Card as default,
-  CardHeader,
-  CardBody,
-  CardFooter,
-  StatsCard,
-  CustomerCard,
-  MetricCard,
-  EmptyStateCard,
-  CardSkeleton
-};
+export default Card;

@@ -100,7 +100,7 @@ export const Badge = React.forwardRef<HTMLSpanElement, BadgeProps>(
           badgeSizes[size],
           
           // Variant styles
-          badgeVariants[variant],
+          badgeVariants[variant].join(' '),
           
           // Pulse animation
           pulse && 'animate-pulse',
@@ -452,13 +452,7 @@ export const ActivityBadge: React.FC<ActivityBadgeProps> = ({
 
 // ============================================================================
 // EXPORTS
+// DEFAULT EXPORT
 // ============================================================================
 
-export {
-  Badge as default,
-  StatusBadge,
-  PriorityBadge,
-  NotificationBadge,
-  BadgeGroup,
-  ActivityBadge
-};
+export default Badge;
