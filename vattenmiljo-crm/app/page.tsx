@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Users, Calendar, TrendingUp, CheckCircle2, Building2, Wrench, Plus, Search, Filter, Upload, Bell, X, Edit, Trash2, FileText, Phone, Mail, MapPin, AlertCircle } from 'lucide-react';
 
 // Types
-type CustomerStatus = 'not_handled' | 'meeting' | 'sales' | 'done' | 'archived';
+type CustomerStatus = 'not_handled' | 'meeting' | 'sales' | 'done' | 'installed' | 'archived';
 type CustomerPriority = 'low' | 'medium' | 'high';
 type UserRole = 'salesperson' | 'internal' | 'installer';
 
@@ -51,7 +51,8 @@ const STATUS_CONFIG = {
   not_handled: { label: 'Ej hanterad', color: 'bg-red-100 text-red-800', icon: AlertCircle },
   meeting: { label: 'Möte bokat', color: 'bg-yellow-100 text-yellow-800', icon: Calendar },
   sales: { label: 'Försäljning', color: 'bg-blue-100 text-blue-800', icon: TrendingUp },
-  done: { label: 'Klar', color: 'bg-green-100 text-green-800', icon: CheckCircle2 },
+  done: { label: 'Klar för installation', color: 'bg-green-100 text-green-800', icon: CheckCircle2 },
+  installed: { label: 'Installation klar', color: 'bg-emerald-100 text-emerald-800', icon: CheckCircle2 },
   archived: { label: 'Arkiverad', color: 'bg-gray-100 text-gray-800', icon: CheckCircle2 }
 };
 
@@ -148,31 +149,44 @@ export default function VattenmiljoCRM() {
     });
   };
 
-  // Status update with notifications
+  // Status update with notifications (fixed to prevent duplicate notifications)
   const updateCustomerStatus = (customerId: string, newStatus: CustomerStatus) => {
     setCustomers(prev => prev.map(customer => {
-      if (customer.id === customerId) {
+      if (customer.id === customerId && customer.status !== newStatus) {
         const updatedCustomer = {
           ...customer,
           status: newStatus,
           updatedAt: new Date().toISOString()
         };
 
-        // Trigger notifications based on status transitions
+        // Trigger notifications based on status transitions (only when status actually changes)
         if (newStatus === 'sales' && customer.status !== 'sales') {
           // Säljare markerar som "försäljning" - notifiera intern personal
-          addNotification({
-            title: '🔔 Försäljning genomförd!',
-            message: `${customer.name} - Redo för intern behandling`,
-            type: 'info'
-          });
+          setTimeout(() => {
+            addNotification({
+              title: '🔔 Försäljning genomförd!',
+              message: `${customer.name} - Redo för intern behandling`,
+              type: 'info'
+            });
+          }, 100);
         } else if (newStatus === 'done' && customer.status !== 'done') {
           // Intern personal markerar som "klar" - notifiera montörer
-          addNotification({
-            title: '🔔 Redo för installation!',
-            message: `${customer.name} - All information komplett, redo för montage`,
-            type: 'success'
-          });
+          setTimeout(() => {
+            addNotification({
+              title: '🔔 Redo för installation!',
+              message: `${customer.name} - All information komplett, redo för montage`,
+              type: 'success'
+            });
+          }, 100);
+        } else if (newStatus === 'installed' && customer.status !== 'installed') {
+          // Montör markerar som "installation klar"
+          setTimeout(() => {
+            addNotification({
+              title: '🔔 Installation genomförd!',
+              message: `${customer.name} - Installation är slutförd`,
+              type: 'success'
+            });
+          }, 100);
         }
 
         return updatedCustomer;
@@ -227,8 +241,8 @@ export default function VattenmiljoCRM() {
       // Intern personal ser kunder från "sales" status som "not_handled" och "done" som "completed"
       return matchesSearch && (customer.status === 'sales' || customer.status === 'done');
     } else if (currentUser.role === 'installer') {
-      // Montörer ser endast kunder som är "done"
-      return matchesSearch && customer.status === 'done';
+      // Montörer ser kunder som är "done" eller "installed"
+      return matchesSearch && (customer.status === 'done' || customer.status === 'installed');
     }
 
     return matchesSearch && matchesStatus;
@@ -349,7 +363,8 @@ export default function VattenmiljoCRM() {
                   <option value="not_handled">Ej hanterad</option>
                   <option value="meeting">Möte bokat</option>
                   <option value="sales">Försäljning</option>
-                  <option value="done">Klar</option>
+                  <option value="done">Klar för installation</option>
+                  <option value="installed">Installation klar</option>
                 </select>
               </div>
 
@@ -407,7 +422,7 @@ export default function VattenmiljoCRM() {
     const canUpdateStatus = () => {
       if (currentUser.role === 'salesperson') return true;
       if (currentUser.role === 'internal' && customer.status === 'sales') return true;
-      if (currentUser.role === 'installer' && customer.status === 'done') return false; // Montörer kan bara se
+      if (currentUser.role === 'installer' && customer.status === 'done') return true; // Montörer kan markera som installerat
       return false;
     };
 
@@ -419,6 +434,9 @@ export default function VattenmiljoCRM() {
       }
       if (currentUser.role === 'internal' && customer.status === 'sales') {
         return 'done';
+      }
+      if (currentUser.role === 'installer' && customer.status === 'done') {
+        return 'installed';
       }
       return customer.status;
     };
@@ -511,6 +529,7 @@ export default function VattenmiljoCRM() {
               {currentUser.role === 'salesperson' && customer.status === 'not_handled' && 'Boka möte'}
               {currentUser.role === 'salesperson' && customer.status === 'meeting' && 'Markera som såld'}
               {currentUser.role === 'internal' && customer.status === 'sales' && 'Markera som klar'}
+              {currentUser.role === 'installer' && customer.status === 'done' && 'Markera installation klar'}
             </button>
           )}
           
@@ -630,6 +649,11 @@ export default function VattenmiljoCRM() {
                   <option value="sales">Ej hanterade</option>
                   <option value="done">Klara</option>
                 </>
+              ) : currentUser.role === 'installer' ? (
+                <>
+                  <option value="done">Redo för installation</option>
+                  <option value="installed">Installation klar</option>
+                </>
               ) : (
                 Object.entries(STATUS_CONFIG).map(([key, config]) => (
                   <option key={key} value={key}>{config.label}</option>
@@ -650,7 +674,21 @@ export default function VattenmiljoCRM() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+          <div className="bg-white rounded-lg p-6 border border-gray-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Redo för installation</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {customers.filter(c => c.status === 'done').length}
+                </p>
+              </div>
+              <div className="p-3 bg-green-100 rounded-lg">
+                <CheckCircle2 className="w-6 h-6 text-green-600" />
+              </div>
+            </div>
+          </div>
+
           <div className="bg-white rounded-lg p-6 border border-gray-200">
             <div className="flex items-center justify-between">
               <div>
@@ -694,13 +732,13 @@ export default function VattenmiljoCRM() {
           <div className="bg-white rounded-lg p-6 border border-gray-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Klara</p>
+                <p className="text-sm text-gray-600">Installationer klara</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {customers.filter(c => c.status === 'done').length}
+                  {customers.filter(c => c.status === 'installed').length}
                 </p>
               </div>
-              <div className="p-3 bg-green-100 rounded-lg">
-                <CheckCircle2 className="w-6 h-6 text-green-600" />
+              <div className="p-3 bg-emerald-100 rounded-lg">
+                <CheckCircle2 className="w-6 h-6 text-emerald-600" />
               </div>
             </div>
           </div>
