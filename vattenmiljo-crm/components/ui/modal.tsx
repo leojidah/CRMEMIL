@@ -124,10 +124,10 @@ const ReactDOM = (globalThis as typeof globalThis & { ReactDOM?: typeof import('
 };
 
 // ============================================================================
-// FOCUS TRAP HOOK
+// FOCUS TRAP HOOK - FIXED TYPE ISSUE
 // ============================================================================
 
-const useFocusTrap = (isActive: boolean, containerRef: React.RefObject<HTMLElement>) => {
+const useFocusTrap = (isActive: boolean, containerRef: React.RefObject<HTMLDivElement | null>) => {
   useEffect(() => {
     if (!isActive || !containerRef.current) return;
 
@@ -182,7 +182,7 @@ export const Modal: React.FC<ModalProps> = ({
   className,
   overlayClassName
 }) => {
-  const modalRef = useRef<HTMLDivElement>(null);
+  const modalRef = useRef<HTMLDivElement | null>(null);
   
   // Focus trap
   useFocusTrap(isOpen, modalRef);
@@ -392,7 +392,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
       confirmButtonClass: 'bg-primary-500 text-white hover:bg-primary-600',
       icon: (
         <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.108-.994.042-1.444-.85.044-1.61.206-2.057-.327zm-.306 4.306c-.621.566-1.34 1.002-2.09 1.271a5.4 5.4 0 0 1-1.655.26z" />
         </svg>
       )
     },
@@ -401,7 +401,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
       confirmButtonClass: 'bg-red-500 text-white hover:bg-red-600',
       icon: (
         <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
         </svg>
       )
     }
@@ -415,41 +415,56 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
       onClose={onClose}
       size="sm"
       variant={config.variant}
-      title={title}
     >
       <ModalBody>
         <div className="flex items-start space-x-4">
-          <div className={cn('flex-shrink-0', modalVariants[config.variant].icon)}>
-            {config.icon}
+          <div className={cn(
+            'flex-shrink-0 p-2 rounded-full',
+            variant === 'danger' ? 'bg-red-100' : 'bg-primary-100'
+          )}>
+            <div className={cn(
+              'w-6 h-6',
+              variant === 'danger' ? 'text-red-600' : 'text-primary-600'
+            )}>
+              {config.icon}
+            </div>
           </div>
+          
           <div className="flex-1">
-            <p className="text-neutral-700">{message}</p>
+            <h3 className="text-lg font-semibold text-neutral-900 mb-2">
+              {title}
+            </h3>
+            <p className="text-neutral-600">
+              {message}
+            </p>
           </div>
         </div>
       </ModalBody>
       
       <ModalFooter>
         <button
+          type="button"
           onClick={onClose}
           className={cn(
-            'px-4 py-2 border border-neutral-300 rounded-md text-neutral-700',
-            'bg-white hover:bg-neutral-50',
-            'focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2',
-            'transition-colors duration-150'
+            'px-4 py-2 text-sm font-medium rounded-lg transition-colors duration-200',
+            'bg-white text-neutral-700 border border-neutral-300',
+            'hover:bg-neutral-50 hover:border-neutral-400',
+            'focus:outline-none focus:ring-2 focus:ring-neutral-500'
           )}
           disabled={loading}
         >
           {cancelText}
         </button>
+        
         <button
+          type="button"
           onClick={handleConfirm}
           className={cn(
-            'px-4 py-2 rounded-md font-medium',
-            'focus:outline-none focus:ring-2 focus:ring-offset-2',
-            'transition-colors duration-150',
-            'disabled:opacity-50 disabled:cursor-not-allowed',
+            'px-4 py-2 text-sm font-medium rounded-lg transition-colors duration-200',
+            'focus:outline-none focus:ring-2',
             config.confirmButtonClass,
-            variant === 'danger' ? 'focus:ring-red-500' : 'focus:ring-primary-500'
+            variant === 'danger' ? 
+              'focus:ring-red-500' : 'focus:ring-primary-500'
           )}
           disabled={loading}
         >
@@ -487,7 +502,7 @@ export const Drawer: React.FC<DrawerProps> = ({
   className,
   overlayClassName
 }) => {
-  const drawerRef = useRef<HTMLDivElement>(null);
+  const drawerRef = useRef<HTMLDivElement | null>(null);
   
   // Focus trap and escape key handling (same as modal)
   useFocusTrap(isOpen, drawerRef);
@@ -541,8 +556,7 @@ export const Drawer: React.FC<DrawerProps> = ({
     <Portal>
       <div
         className={cn(
-          'fixed inset-0 z-50',
-          'bg-black/50 backdrop-blur-sm',
+          'fixed inset-0 z-50 bg-black/50 backdrop-blur-sm',
           'animate-fade-in',
           overlayClassName
         )}
@@ -551,8 +565,8 @@ export const Drawer: React.FC<DrawerProps> = ({
         <div
           ref={drawerRef}
           className={cn(
-            'absolute bg-white shadow-large',
-            'overflow-hidden flex flex-col',
+            'fixed bg-white shadow-xl',
+            'flex flex-col',
             positionClasses[position],
             className
           )}
@@ -561,39 +575,13 @@ export const Drawer: React.FC<DrawerProps> = ({
         >
           {/* Drawer Header */}
           {(title || subtitle || showCloseButton) && (
-            <div className="px-6 py-4 border-b border-neutral-200 flex-shrink-0">
-              <div className="flex items-start justify-between">
-                <div className="flex-1 min-w-0">
-                  {title && (
-                    <h2 className="text-xl font-semibold text-neutral-900 truncate">
-                      {title}
-                    </h2>
-                  )}
-                  {subtitle && (
-                    <p className="text-sm text-neutral-600 mt-1">
-                      {subtitle}
-                    </p>
-                  )}
-                </div>
-
-                {showCloseButton && (
-                  <button
-                    onClick={onClose}
-                    className={cn(
-                      'ml-4 p-1 rounded-full',
-                      'text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100',
-                      'transition-colors duration-150',
-                      'focus:outline-none focus:ring-2 focus:ring-primary-500'
-                    )}
-                    aria-label="Stäng"
-                  >
-                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                )}
-              </div>
-            </div>
+            <ModalHeader
+              title={title}
+              subtitle={subtitle}
+              onClose={onClose}
+              showCloseButton={showCloseButton}
+              className="border-b border-neutral-200"
+            />
           )}
 
           {/* Drawer Content */}
@@ -662,7 +650,6 @@ export const Drawer: React.FC<DrawerProps> = ({
 
 // ============================================================================
 // EXPORTS
-// DEFAULT EXPORT
 // ============================================================================
 
 export default Modal;

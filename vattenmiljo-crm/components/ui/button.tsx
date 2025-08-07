@@ -310,6 +310,9 @@ export const ButtonGroup = forwardRef<HTMLDivElement, ButtonGroupProps>(
     const processedChildren = React.Children.map(children, (child, index) => {
       if (!React.isValidElement(child)) return child;
       
+      // Typesafe way to handle child props - fixed TypeScript error
+      const childElement = child as React.ReactElement<any>;
+      
       // Clone child with group props
       const childProps: Record<string, unknown> = {
         size,
@@ -323,14 +326,14 @@ export const ButtonGroup = forwardRef<HTMLDivElement, ButtonGroupProps>(
         
         if (orientation === 'horizontal') {
           childProps.className = cn(
-            child.props.className,
+            childElement.props?.className,
             isFirst && 'rounded-r-none',
             isLast && 'rounded-l-none',
             !isFirst && !isLast && 'rounded-none'
           );
         } else {
           childProps.className = cn(
-            child.props.className,
+            childElement.props?.className,
             isFirst && 'rounded-b-none',
             isLast && 'rounded-t-none',
             !isFirst && !isLast && 'rounded-none'
@@ -338,7 +341,7 @@ export const ButtonGroup = forwardRef<HTMLDivElement, ButtonGroupProps>(
         }
       }
       
-      return React.cloneElement(child, childProps);
+      return React.cloneElement(childElement, childProps);
     });
 
     return (
@@ -355,3 +358,42 @@ export const ButtonGroup = forwardRef<HTMLDivElement, ButtonGroupProps>(
 );
 
 ButtonGroup.displayName = 'ButtonGroup';
+
+// ============================================================================
+// USAGE EXAMPLES (commented out for production)
+// ============================================================================
+
+/*
+// Basic buttons
+<Button variant="primary" size="md">
+  Spara
+</Button>
+
+<Button variant="secondary" leftIcon={<PlusIcon />}>
+  Lägg till
+</Button>
+
+<Button variant="error" loading loadingText="Tar bort...">
+  Ta bort
+</Button>
+
+// Icon button
+<IconButton 
+  variant="ghost" 
+  icon={<EditIcon />} 
+  aria-label="Redigera"
+/>
+
+// Button group
+<ButtonGroup attached>
+  <Button variant="default">Alla</Button>
+  <Button variant="default">Aktiva</Button>
+  <Button variant="default">Arkiverade</Button>
+</ButtonGroup>
+*/
+
+// ============================================================================
+// EXPORTS
+// ============================================================================
+
+export default Button;
