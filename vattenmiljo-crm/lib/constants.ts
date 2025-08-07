@@ -3,13 +3,12 @@
 // ============================================================================
 
 import type { 
-    CustomerStatusColor, 
-    UserRoleLabel, 
-    RolePermissions, 
-    AppConfig,
-    Permission,
     CustomerStatus,
-    UserRole
+    UserRole,
+    RolePermissions,
+    AppConfig,
+    CustomerPriority,
+    ActivityType
   } from './types';
   
   // ============================================================================
@@ -135,7 +134,12 @@ import type {
   // PRIORITY LEVELS
   // ============================================================================
   
-  export const PRIORITY_CONFIG = {
+  export const PRIORITY_CONFIG: Record<CustomerPriority, {
+    label: string;
+    color: string;
+    bgColor: string;
+    icon: string;
+  }> = {
     low: {
       label: 'Låg',
       color: 'text-gray-600',
@@ -160,7 +164,11 @@ import type {
   // ACTIVITY TYPES
   // ============================================================================
   
-  export const ACTIVITY_CONFIG = {
+  export const ACTIVITY_CONFIG: Record<ActivityType, {
+    label: string;
+    icon: string;
+    color: string;
+  }> = {
     status_change: {
       label: 'Statusändring',
       icon: 'RefreshCw',

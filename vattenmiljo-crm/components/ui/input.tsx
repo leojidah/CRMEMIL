@@ -1,8 +1,8 @@
 // ============================================================================
-// INPUT COMPONENT - Form Input Fields
+// INPUT COMPONENTS - Form Inputs & Controls
 // ============================================================================
 
-import React, { useState } from 'react';
+import React, { forwardRef } from 'react';
 import { cn } from '@/lib/utils';
 
 // ============================================================================
@@ -10,23 +10,61 @@ import { cn } from '@/lib/utils';
 // ============================================================================
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
-  label?: string;
-  error?: string;
-  helper?: string;
-  leftIcon?: React.ReactNode;
-  rightIcon?: React.ReactNode;
   variant?: 'default' | 'filled' | 'outlined';
   inputSize?: 'sm' | 'md' | 'lg';
-  fullWidth?: boolean;
+  error?: string;
+  label?: string;
+  hint?: string;
+  leftIcon?: React.ReactNode;
+  rightIcon?: React.ReactNode;
+  leftAddon?: React.ReactNode;
+  rightAddon?: React.ReactNode;
 }
 
 export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
-  label?: string;
-  error?: string;
-  helper?: string;
   variant?: 'default' | 'filled' | 'outlined';
+  inputSize?: 'sm' | 'md' | 'lg';
+  error?: string;
+  label?: string;
+  hint?: string;
   resize?: 'none' | 'vertical' | 'horizontal' | 'both';
-  fullWidth?: boolean;
+}
+
+export interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
+  variant?: 'default' | 'filled' | 'outlined';
+  inputSize?: 'sm' | 'md' | 'lg';
+  error?: string;
+  label?: string;
+  hint?: string;
+  placeholder?: string;
+  options?: Array<{ value: string | number; label: string; disabled?: boolean }>;
+}
+
+export interface CheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type' | 'size'> {
+  label?: string;
+  description?: string;
+  error?: string;
+  inputSize?: 'sm' | 'md' | 'lg';
+  indeterminate?: boolean;
+}
+
+export interface RadioProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type' | 'size'> {
+  label?: string;
+  description?: string;
+  error?: string;
+  inputSize?: 'sm' | 'md' | 'lg';
+}
+
+export interface RadioGroupProps {
+  name: string;
+  value?: string;
+  onChange?: (value: string) => void;
+  options: Array<{ value: string; label: string; description?: string; disabled?: boolean }>;
+  orientation?: 'horizontal' | 'vertical';
+  error?: string;
+  label?: string;
+  hint?: string;
+  className?: string;
 }
 
 // ============================================================================
@@ -34,121 +72,157 @@ export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextArea
 // ============================================================================
 
 const inputVariants = {
-  default: [
-    'border border-gray-300',
-    'focus:border-blue-500 focus:ring-1 focus:ring-blue-500',
-    'bg-white'
-  ],
-  filled: [
-    'border-0',
-    'bg-gray-50 focus:bg-white',
-    'focus:ring-2 focus:ring-blue-500'
-  ],
-  outlined: [
-    'border-2 border-gray-300',
-    'focus:border-blue-500',
-    'bg-transparent'
-  ]
+  default: {
+    base: 'border border-neutral-300 bg-white focus:border-primary-500 focus:ring-1 focus:ring-primary-500',
+    error: 'border-red-500 focus:border-red-500 focus:ring-red-500'
+  },
+  filled: {
+    base: 'border-0 bg-neutral-100 focus:bg-white focus:ring-2 focus:ring-primary-500',
+    error: 'bg-red-50 focus:bg-red-50 focus:ring-red-500'
+  },
+  outlined: {
+    base: 'border-2 border-neutral-300 bg-transparent focus:border-primary-500',
+    error: 'border-red-500 focus:border-red-500'
+  }
 };
 
 const inputSizes = {
-  sm: 'px-3 py-2 text-sm',
-  md: 'px-4 py-2.5 text-base',
-  lg: 'px-4 py-3 text-lg'
+  sm: {
+    input: 'h-8 px-3 text-sm',
+    textarea: 'px-3 py-2 text-sm',
+    icon: 'w-4 h-4',
+    iconContainer: 'px-2'
+  },
+  md: {
+    input: 'h-10 px-3 text-sm',
+    textarea: 'px-3 py-2 text-sm',
+    icon: 'w-5 h-5',
+    iconContainer: 'px-3'
+  },
+  lg: {
+    input: 'h-12 px-4 text-base',
+    textarea: 'px-4 py-3 text-base',
+    icon: 'w-6 h-6',
+    iconContainer: 'px-4'
+  }
 };
-
-const baseInputClasses = [
-  'block w-full rounded-md',
-  'placeholder-gray-400',
-  'transition-all duration-200',
-  'disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500',
-  'focus:outline-none'
-];
 
 // ============================================================================
 // INPUT COMPONENT
 // ============================================================================
 
-export const Input = React.forwardRef<HTMLInputElement, InputProps>(
+export const Input = forwardRef<HTMLInputElement, InputProps>(
   (
     {
       className,
-      label,
-      error,
-      helper,
-      leftIcon,
-      rightIcon,
       variant = 'default',
       inputSize = 'md',
-      fullWidth = true,
-      id,
+      type = 'text',
+      error,
+      label,
+      hint,
+      leftIcon,
+      rightIcon,
+      leftAddon,
+      rightAddon,
+      disabled,
       ...props
     },
     ref
   ) => {
-    const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
     const hasError = Boolean(error);
+    const hasLeftElement = Boolean(leftIcon || leftAddon);
+    const hasRightElement = Boolean(rightIcon || rightAddon);
+
+    const inputClasses = cn(
+      // Base styles
+      'w-full rounded-lg transition-colors duration-200 placeholder:text-neutral-500',
+      'disabled:bg-neutral-50 disabled:text-neutral-500 disabled:cursor-not-allowed',
+      'focus:outline-none',
+      
+      // Variant styles
+      hasError ? inputVariants[variant].error : inputVariants[variant].base,
+      
+      // Size styles
+      inputSizes[inputSize].input,
+      
+      // Padding adjustments for icons/addons
+      hasLeftElement && 'pl-10',
+      hasRightElement && 'pr-10',
+      
+      className
+    );
+
+    const WrapperComponent = leftAddon || rightAddon ? 'div' : React.Fragment;
+    const wrapperProps = leftAddon || rightAddon ? {
+      className: 'relative flex items-stretch'
+    } : {};
 
     return (
-      <div className={cn(!fullWidth && 'inline-block')}>
+      <div className="w-full">
         {label && (
-          <label 
-            htmlFor={inputId}
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
+          <label className="block text-sm font-medium text-neutral-700 mb-2">
             {label}
-            {props.required && <span className="text-red-500 ml-1">*</span>}
           </label>
         )}
         
-        <div className="relative">
-          {leftIcon && (
-            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-              <div className="w-5 h-5 text-gray-400">
-                {leftIcon}
-              </div>
+        <WrapperComponent {...wrapperProps}>
+          {leftAddon && (
+            <div className="flex items-center px-3 bg-neutral-50 border border-r-0 border-neutral-300 rounded-l-lg text-neutral-500 text-sm">
+              {leftAddon}
             </div>
           )}
           
-          <input
-            ref={ref}
-            id={inputId}
-            className={cn(
-              baseInputClasses,
-              inputVariants[variant],
-              inputSizes[inputSize],
-              leftIcon && 'pl-12',
-              rightIcon && 'pr-12',
-              hasError && [
-                'border-red-300 text-red-900 placeholder-red-300',
-                'focus:border-red-500 focus:ring-red-500'
-              ],
-              !fullWidth && 'w-auto',
-              className
+          <div className="relative flex-1">
+            <input
+              ref={ref}
+              type={type}
+              disabled={disabled}
+              className={cn(
+                inputClasses,
+                leftAddon ? 'rounded-l-none' : undefined,
+                rightAddon ? 'rounded-r-none' : undefined
+              )}
+              {...props}
+            />
+            
+            {leftIcon && !leftAddon && (
+              <div className={cn(
+                'absolute left-0 top-0 h-full flex items-center text-neutral-500',
+                inputSizes[inputSize].iconContainer
+              )}>
+                <div className={inputSizes[inputSize].icon}>
+                  {leftIcon}
+                </div>
+              </div>
             )}
-            {...props}
-          />
-          
-          {rightIcon && (
-            <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-              <div className="w-5 h-5 text-gray-400">
-                {rightIcon}
+            
+            {rightIcon && !rightAddon && (
+              <div className={cn(
+                'absolute right-0 top-0 h-full flex items-center text-neutral-500',
+                inputSizes[inputSize].iconContainer
+              )}>
+                <div className={inputSizes[inputSize].icon}>
+                  {rightIcon}
+                </div>
               </div>
+            )}
+          </div>
+          
+          {rightAddon && (
+            <div className="flex items-center px-3 bg-neutral-50 border border-l-0 border-neutral-300 rounded-r-lg text-neutral-500 text-sm">
+              {rightAddon}
             </div>
           )}
-        </div>
+        </WrapperComponent>
         
-        {(error || helper) && (
+        {(error || hint) && (
           <div className="mt-1">
             {error && (
-              <p className="text-sm text-red-600" role="alert">
-                {error}
-              </p>
+              <p className="text-sm text-red-600">{error}</p>
             )}
-            {helper && !error && (
-              <p className="text-sm text-gray-500">
-                {helper}
-              </p>
+            {hint && !error && (
+              <p className="text-sm text-neutral-500">{hint}</p>
             )}
           </div>
         )}
@@ -163,23 +237,22 @@ Input.displayName = 'Input';
 // TEXTAREA COMPONENT
 // ============================================================================
 
-export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
+export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
   (
     {
       className,
-      label,
-      error,
-      helper,
       variant = 'default',
+      inputSize = 'md',
+      error,
+      label,
+      hint,
       resize = 'vertical',
-      fullWidth = true,
-      id,
-      rows = 3,
+      rows = 4,
+      disabled,
       ...props
     },
     ref
   ) => {
-    const textareaId = id || `textarea-${Math.random().toString(36).substr(2, 9)}`;
     const hasError = Boolean(error);
 
     const resizeClasses = {
@@ -189,48 +262,47 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       both: 'resize'
     };
 
+    const textareaClasses = cn(
+      // Base styles
+      'w-full rounded-lg transition-colors duration-200 placeholder:text-neutral-500',
+      'disabled:bg-neutral-50 disabled:text-neutral-500 disabled:cursor-not-allowed',
+      'focus:outline-none',
+      
+      // Variant styles
+      hasError ? inputVariants[variant].error : inputVariants[variant].base,
+      
+      // Size styles
+      inputSizes[inputSize].textarea,
+      
+      // Resize styles
+      resizeClasses[resize],
+      
+      className
+    );
+
     return (
-      <div className={cn(!fullWidth && 'inline-block')}>
+      <div className="w-full">
         {label && (
-          <label 
-            htmlFor={textareaId}
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
+          <label className="block text-sm font-medium text-neutral-700 mb-2">
             {label}
-            {props.required && <span className="text-red-500 ml-1">*</span>}
           </label>
         )}
         
         <textarea
           ref={ref}
-          id={textareaId}
           rows={rows}
-          className={cn(
-            baseInputClasses,
-            inputVariants[variant],
-            inputSizes.md,
-            resizeClasses[resize],
-            hasError && [
-              'border-red-300 text-red-900 placeholder-red-300',
-              'focus:border-red-500 focus:ring-red-500'
-            ],
-            !fullWidth && 'w-auto',
-            className
-          )}
+          disabled={disabled}
+          className={textareaClasses}
           {...props}
         />
         
-        {(error || helper) && (
+        {(error || hint) && (
           <div className="mt-1">
             {error && (
-              <p className="text-sm text-red-600" role="alert">
-                {error}
-              </p>
+              <p className="text-sm text-red-600">{error}</p>
             )}
-            {helper && !error && (
-              <p className="text-sm text-gray-500">
-                {helper}
-              </p>
+            {hint && !error && (
+              <p className="text-sm text-neutral-500">{hint}</p>
             )}
           </div>
         )}
@@ -242,82 +314,106 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
 Textarea.displayName = 'Textarea';
 
 // ============================================================================
-// PASSWORD INPUT COMPONENT
+// SELECT COMPONENT
 // ============================================================================
 
-interface PasswordInputProps extends Omit<InputProps, 'type' | 'rightIcon'> {
-  showStrength?: boolean;
-}
+export const Select = forwardRef<HTMLSelectElement, SelectProps>(
+  (
+    {
+      className,
+      variant = 'default',
+      inputSize = 'md',
+      error,
+      label,
+      hint,
+      placeholder,
+      options = [],
+      disabled,
+      children,
+      ...props
+    },
+    ref
+  ) => {
+    const hasError = Boolean(error);
 
-export const PasswordInput = React.forwardRef<HTMLInputElement, PasswordInputProps>(
-  ({ showStrength = false, ...props }, ref) => {
-    const [showPassword, setShowPassword] = useState(false);
-    const [strength, setStrength] = useState(0);
-
-    const calculateStrength = (password: string): number => {
-      let score = 0;
-      if (password.length >= 8) score += 1;
-      if (/[a-z]/.test(password)) score += 1;
-      if (/[A-Z]/.test(password)) score += 1;
-      if (/[0-9]/.test(password)) score += 1;
-      if (/[^A-Za-z0-9]/.test(password)) score += 1;
-      return score;
-    };
-
-    const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const password = e.target.value;
-      if (showStrength) {
-        setStrength(calculateStrength(password));
-      }
-      props.onChange?.(e);
-    };
-
-    const strengthColors = ['bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-blue-500', 'bg-green-500'];
-    const strengthLabels = ['Mycket svag', 'Svag', 'Okej', 'Stark', 'Mycket stark'];
+    const selectClasses = cn(
+      // Base styles
+      'w-full rounded-lg transition-colors duration-200 appearance-none cursor-pointer',
+      'disabled:bg-neutral-50 disabled:text-neutral-500 disabled:cursor-not-allowed',
+      'focus:outline-none bg-white',
+      
+      // Variant styles
+      hasError ? inputVariants[variant].error : inputVariants[variant].base,
+      
+      // Size styles
+      inputSizes[inputSize].input,
+      
+      // Arrow padding
+      'pr-10',
+      
+      className
+    );
 
     return (
-      <div>
-        <Input
-          ref={ref}
-          type={showPassword ? 'text' : 'password'}
-          rightIcon={
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="hover:text-gray-600 transition-colors"
-            >
-              {showPassword ? (
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L12 12.756m0 0l3.122-3.122M15 3m.122 9.878a10.05 10.05 0 01-4.122 7.825" />
-                </svg>
-              ) : (
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.543 7-1.275 4.057-5.065 7-9.543 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-              )}
-            </button>
-          }
-          onChange={handlePasswordChange}
-          {...props}
-        />
+      <div className="w-full">
+        {label && (
+          <label className="block text-sm font-medium text-neutral-700 mb-2">
+            {label}
+          </label>
+        )}
         
-        {showStrength && props.value && (
-          <div className="mt-2">
-            <div className="flex space-x-1 mb-1">
-              {[...Array(5)].map((_, i) => (
-                <div
-                  key={i}
-                  className={cn(
-                    'flex-1 h-1 rounded-full',
-                    i < strength ? strengthColors[strength - 1] : 'bg-gray-200'
-                  )}
-                />
-              ))}
-            </div>
-            <p className="text-xs text-gray-600">
-              Lösenordsstyrka: {strengthLabels[strength - 1] || 'Ange lösenord'}
-            </p>
+        <div className="relative">
+          <select
+            ref={ref}
+            disabled={disabled}
+            className={selectClasses}
+            {...props}
+          >
+            {placeholder && (
+              <option value="" disabled>
+                {placeholder}
+              </option>
+            )}
+            
+            {options.map((option) => (
+              <option
+                key={option.value}
+                value={option.value}
+                disabled={option.disabled}
+              >
+                {option.label}
+              </option>
+            ))}
+            
+            {children}
+          </select>
+          
+          {/* Custom arrow */}
+          <div className="absolute right-3 top-0 h-full flex items-center pointer-events-none">
+            <svg
+              className="w-5 h-5 text-neutral-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M7 10l5 5 5-5"
+              />
+            </svg>
+          </div>
+        </div>
+        
+        {(error || hint) && (
+          <div className="mt-1">
+            {error && (
+              <p className="text-sm text-red-600">{error}</p>
+            )}
+            {hint && !error && (
+              <p className="text-sm text-neutral-500">{hint}</p>
+            )}
           </div>
         )}
       </div>
@@ -325,157 +421,240 @@ export const PasswordInput = React.forwardRef<HTMLInputElement, PasswordInputPro
   }
 );
 
-PasswordInput.displayName = 'PasswordInput';
+Select.displayName = 'Select';
 
 // ============================================================================
-// PHONE INPUT COMPONENT
+// CHECKBOX COMPONENT
 // ============================================================================
 
-interface PhoneInputProps extends Omit<InputProps, 'type'> {
-  format?: 'swedish' | 'international';
-}
-
-export const PhoneInput = React.forwardRef<HTMLInputElement, PhoneInputProps>(
-  ({ format = 'swedish', onChange, ...props }, ref) => {
-    const formatSwedishPhone = (value: string): string => {
-      // Remove all non-digits
-      const digits = value.replace(/\D/g, '');
-      
-      // Apply Swedish phone number formatting
-      if (digits.startsWith('46')) {
-        // International format starting with 46
-        const national = digits.slice(2);
-        if (national.length <= 2) return `+46 ${national}`;
-        if (national.length <= 5) return `+46 ${national.slice(0, 2)} ${national.slice(2)}`;
-        return `+46 ${national.slice(0, 2)} ${national.slice(2, 5)} ${national.slice(5, 7)} ${national.slice(7, 9)}`;
-      } else if (digits.startsWith('0')) {
-        // National format starting with 0
-        if (digits.length <= 3) return digits;
-        if (digits.length <= 6) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
-        return `${digits.slice(0, 3)}-${digits.slice(3, 6)} ${digits.slice(6, 8)} ${digits.slice(8, 10)}`;
+export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
+  (
+    {
+      className,
+      label,
+      description,
+      error,
+      inputSize = 'md',
+      indeterminate = false,
+      disabled,
+      ...props
+    },
+    ref
+  ) => {
+    const checkboxRef = React.useRef<HTMLInputElement>(null);
+    
+    React.useEffect(() => {
+      const checkbox = checkboxRef.current || (ref as React.RefObject<HTMLInputElement>)?.current;
+      if (checkbox) {
+        checkbox.indeterminate = indeterminate;
       }
-      
-      return digits;
+    }, [indeterminate, ref]);
+
+    const sizeClasses = {
+      sm: 'w-4 h-4',
+      md: 'w-5 h-5',
+      lg: 'w-6 h-6'
     };
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (format === 'swedish') {
-        const formatted = formatSwedishPhone(e.target.value);
-        e.target.value = formatted;
-      }
-      onChange?.(e);
-    };
-
-    const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-      if (format === 'swedish') {
-        const formatted = formatSwedishPhone(e.target.value);
-        e.target.value = formatted;
-      }
-      props.onBlur?.(e);
-    };
+    const checkboxClasses = cn(
+      'rounded border-neutral-300 text-primary-500 focus:ring-primary-500 focus:ring-2 focus:ring-offset-2',
+      'disabled:bg-neutral-50 disabled:border-neutral-200 disabled:cursor-not-allowed',
+      'cursor-pointer',
+      sizeClasses[inputSize],
+      className
+    );
 
     return (
-      <Input
-        ref={ref}
-        type="tel"
-        leftIcon={
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-          </svg>
-        }
-        placeholder={format === 'swedish' ? '070-123 45 67' : '+46 70 123 45 67'}
-        onChange={handleChange}
-        onBlur={handleBlur}
-        {...props}
-      />
+      <div className="w-full">
+        <div className="flex items-start">
+          <div className="flex items-center h-5">
+            <input
+              ref={ref || checkboxRef}
+              type="checkbox"
+              disabled={disabled}
+              className={checkboxClasses}
+              {...props}
+            />
+          </div>
+          
+          {(label || description) && (
+            <div className="ml-3">
+              {label && (
+                <label
+                  htmlFor={props.id}
+                  className={cn(
+                    'block font-medium text-neutral-900 cursor-pointer',
+                    inputSize === 'sm' && 'text-sm',
+                    inputSize === 'md' && 'text-sm',
+                    inputSize === 'lg' && 'text-base',
+                    disabled && 'text-neutral-500 cursor-not-allowed'
+                  )}
+                >
+                  {label}
+                </label>
+              )}
+              
+              {description && (
+                <p className={cn(
+                  'text-neutral-600',
+                  inputSize === 'sm' && 'text-xs',
+                  inputSize === 'md' && 'text-sm',
+                  inputSize === 'lg' && 'text-sm',
+                  disabled && 'text-neutral-400'
+                )}>
+                  {description}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+        
+        {error && (
+          <p className="mt-1 text-sm text-red-600">{error}</p>
+        )}
+      </div>
     );
   }
 );
 
-PhoneInput.displayName = 'PhoneInput';
+Checkbox.displayName = 'Checkbox';
 
 // ============================================================================
-// SEARCH INPUT COMPONENT
+// RADIO COMPONENT
 // ============================================================================
 
-interface SearchInputProps extends Omit<InputProps, 'type' | 'leftIcon'> {
-  onClear?: () => void;
-  showClearButton?: boolean;
-}
+export const Radio = forwardRef<HTMLInputElement, RadioProps>(
+  (
+    {
+      className,
+      label,
+      description,
+      error,
+      inputSize = 'md',
+      disabled,
+      ...props
+    },
+    ref
+  ) => {
+    const sizeClasses = {
+      sm: 'w-4 h-4',
+      md: 'w-5 h-5',
+      lg: 'w-6 h-6'
+    };
 
-export const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
-  ({ onClear, showClearButton = true, ...props }, ref) => {
-    const hasValue = props.value && props.value.toString().length > 0;
+    const radioClasses = cn(
+      'border-neutral-300 text-primary-500 focus:ring-primary-500 focus:ring-2 focus:ring-offset-2',
+      'disabled:bg-neutral-50 disabled:border-neutral-200 disabled:cursor-not-allowed',
+      'cursor-pointer',
+      sizeClasses[inputSize],
+      className
+    );
 
     return (
-      <Input
-        ref={ref}
-        type="search"
-        leftIcon={
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-        }
-        rightIcon={
-          showClearButton && hasValue && (
-            <button
-              type="button"
-              onClick={onClear}
-              className="hover:text-neutral-600 transition-colors pointer-events-auto"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          )
-        }
-        placeholder="Sök kunder..."
-        {...props}
-      />
+      <div className="w-full">
+        <div className="flex items-start">
+          <div className="flex items-center h-5">
+            <input
+              ref={ref}
+              type="radio"
+              disabled={disabled}
+              className={radioClasses}
+              {...props}
+            />
+          </div>
+          
+          {(label || description) && (
+            <div className="ml-3">
+              {label && (
+                <label
+                  htmlFor={props.id}
+                  className={cn(
+                    'block font-medium text-neutral-900 cursor-pointer',
+                    inputSize === 'sm' && 'text-sm',
+                    inputSize === 'md' && 'text-sm',
+                    inputSize === 'lg' && 'text-base',
+                    disabled && 'text-neutral-500 cursor-not-allowed'
+                  )}
+                >
+                  {label}
+                </label>
+              )}
+              
+              {description && (
+                <p className={cn(
+                  'text-neutral-600',
+                  inputSize === 'sm' && 'text-xs',
+                  inputSize === 'md' && 'text-sm',
+                  inputSize === 'lg' && 'text-sm',
+                  disabled && 'text-neutral-400'
+                )}>
+                  {description}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+        
+        {error && (
+          <p className="mt-1 text-sm text-red-600">{error}</p>
+        )}
+      </div>
     );
   }
 );
 
-SearchInput.displayName = 'SearchInput';
+Radio.displayName = 'Radio';
 
 // ============================================================================
-// FORM GROUP COMPONENT
+// RADIO GROUP COMPONENT
 // ============================================================================
 
-interface FormGroupProps {
-  children: React.ReactNode;
-  className?: string;
-  direction?: 'row' | 'column';
-  gap?: 'sm' | 'md' | 'lg';
-}
-
-export const FormGroup: React.FC<FormGroupProps> = ({
-  children,
-  className,
-  direction = 'column',
-  gap = 'md'
+export const RadioGroup: React.FC<RadioGroupProps> = ({
+  name,
+  value,
+  onChange,
+  options,
+  orientation = 'vertical',
+  error,
+  label,
+  hint,
+  className
 }) => {
-  const gapClasses = {
-    sm: direction === 'row' ? 'gap-2' : 'space-y-2',
-    md: direction === 'row' ? 'gap-4' : 'space-y-4',
-    lg: direction === 'row' ? 'gap-6' : 'space-y-6'
-  };
-
   return (
-    <div
-      className={cn(
-        direction === 'row' ? 'flex flex-wrap items-end' : 'block',
-        gapClasses[gap],
-        className
+    <div className={cn('w-full', className)}>
+      {label && (
+        <div className="mb-3">
+          <label className="block text-sm font-medium text-neutral-700">
+            {label}
+          </label>
+          {hint && (
+            <p className="mt-1 text-sm text-neutral-500">{hint}</p>
+          )}
+        </div>
       )}
-    >
-      {children}
+      
+      <div className={cn(
+        'space-y-3',
+        orientation === 'horizontal' && 'flex space-y-0 space-x-6'
+      )}>
+        {options.map((option, index) => (
+          <Radio
+            key={option.value}
+            id={`${name}-${index}`}
+            name={name}
+            value={option.value}
+            checked={value === option.value}
+            onChange={(e) => onChange?.(e.target.value)}
+            label={option.label}
+            description={option.description}
+            disabled={option.disabled}
+          />
+        ))}
+      </div>
+      
+      {error && (
+        <p className="mt-2 text-sm text-red-600">{error}</p>
+      )}
     </div>
   );
 };
-
-// ============================================================================
-// EXPORTS
-// ============================================================================
-
-export default Input;

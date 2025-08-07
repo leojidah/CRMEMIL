@@ -7,11 +7,11 @@ import type {
     CustomerStatus, 
     UserRole, 
     User,
+    Permission,
     CustomerActivity,
     FilterState,
     SortState,
-    NotificationType,
-    Permission
+    NotificationType
   } from './types';
   import { CUSTOMER_STATUS_CONFIG, USER_ROLE_CONFIG, ROLE_PERMISSIONS } from './constants';
   
@@ -55,82 +55,55 @@ import type {
   export function formatDate(dateString: string, options: Intl.DateTimeFormatOptions = {}): string {
     const defaultOptions: Intl.DateTimeFormatOptions = {
       year: 'numeric',
-      month: 'short',
+      month: 'long',
       day: 'numeric',
       ...options
     };
     
-    return new Intl.DateTimeFormat('sv-SE', defaultOptions).format(new Date(dateString));
+    try {
+      return new Date(dateString).toLocaleDateString('sv-SE', defaultOptions);
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return dateString;
+    }
   }
   
   /**
-   * Formats date and time in Swedish locale
+   * Formats a date string to relative time (e.g., "2 dagar sedan")
    */
-  export function formatDateTime(dateString: string): string {
-    return new Intl.DateTimeFormat('sv-SE', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(new Date(dateString));
-  }
-  
-  /**
-   * Gets relative time in Swedish (e.g., "2 dagar sedan")
-   */
-  export function getRelativeTime(dateString: string): string {
+  export function formatRelativeTime(dateString: string): string {
     const date = new Date(dateString);
     const now = new Date();
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-  
-    if (diffInSeconds < 60) return 'Just nu';
     
-    const diffInMinutes = Math.floor(diffInSeconds / 60);
-    if (diffInMinutes < 60) return `${diffInMinutes} min sedan`;
+    const intervals = [
+      { label: 'år', seconds: 31536000 },
+      { label: 'månad', seconds: 2592000 },
+      { label: 'dag', seconds: 86400 },
+      { label: 'timme', seconds: 3600 },
+      { label: 'minut', seconds: 60 }
+    ];
     
-    const diffInHours = Math.floor(diffInMinutes / 60);
-    if (diffInHours < 24) return `${diffInHours}h sedan`;
+    for (const interval of intervals) {
+      const count = Math.floor(diffInSeconds / interval.seconds);
+      if (count > 0) {
+        return `${count} ${interval.label}${count > 1 ? (interval.label === 'månad' ? 'er' : interval.label === 'timme' ? 'ar' : 'ar') : ''} sedan`;
+      }
+    }
     
-    const diffInDays = Math.floor(diffInHours / 24);
-    if (diffInDays < 7) return `${diffInDays} dagar sedan`;
-    
-    const diffInWeeks = Math.floor(diffInDays / 7);
-    if (diffInWeeks < 4) return `${diffInWeeks} veckor sedan`;
-    
-    const diffInMonths = Math.floor(diffInDays / 30);
-    if (diffInMonths < 12) return `${diffInMonths} månader sedan`;
-    
-    const diffInYears = Math.floor(diffInDays / 365);
-    return `${diffInYears} år sedan`;
+    return 'Just nu';
   }
   
   /**
-   * Checks if a date is today
+   * Formats date for form inputs (YYYY-MM-DD)
    */
-  export function isToday(dateString: string): boolean {
-    const date = new Date(dateString);
-    const today = new Date();
-    return date.toDateString() === today.toDateString();
-  }
-  
-  /**
-   * Checks if a date is overdue
-   */
-  export function isOverdue(dateString: string): boolean {
-    const date = new Date(dateString);
-    const now = new Date();
-    return date < now;
-  }
-  
-  /**
-   * Gets days until a date
-   */
-  export function getDaysUntil(dateString: string): number {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInTime = date.getTime() - now.getTime();
-    return Math.ceil(diffInTime / (1000 * 60 * 60 * 24));
+  export function formatDateForInput(dateString: string): string {
+    try {
+      return new Date(dateString).toISOString().split('T')[0];
+    } catch (error) {
+      console.error('Error formatting date for input:', error);
+      return '';
+    }
   }
   
   // ============================================================================
@@ -138,16 +111,9 @@ import type {
   // ============================================================================
   
   /**
-   * Capitalizes the first letter of a string
+   * Capitalizes first letter of each word
    */
   export function capitalize(str: string): string {
-    return str.charAt(0).toUpperCase() + str.slice(1);
-  }
-  
-  /**
-   * Converts string to title case
-   */
-  export function toTitleCase(str: string): string {
     return str.replace(/\w\S*/g, (txt) => 
       txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase()
     );
@@ -157,92 +123,33 @@ import type {
    * Truncates text with ellipsis
    */
   export function truncate(text: string, length: number): string {
-    if (text.length <= length) return text;
-    return text.slice(0, length) + '...';
+    return text.length <= length ? text : `${text.substring(0, length)}...`;
   }
   
   /**
-   * Removes extra whitespace and normalizes string
+   * Generates a random ID
    */
-  export function normalizeString(str: string): string {
-    return str.trim().replace(/\s+/g, ' ');
+  export function generateId(): string {
+    return Math.random().toString(36).substring(2) + Date.now().toString(36);
   }
   
   /**
-   * Generates initials from a name
-   */
-  export function getInitials(name: string): string {
-    return name
-      .split(' ')
-      .map(part => part.charAt(0).toUpperCase())
-      .slice(0, 2)
-      .join('');
-  }
-  
-  // ============================================================================
-  // PHONE UTILITIES
-  // ============================================================================
-  
-  /**
-   * Formats Swedish phone number
+   * Formats phone number
    */
   export function formatPhoneNumber(phone: string): string {
     // Remove all non-digit characters
     const cleaned = phone.replace(/\D/g, '');
     
-    // Handle different Swedish phone number formats
+    // Format Swedish phone numbers
     if (cleaned.startsWith('46')) {
-      // International format +46
-      const number = cleaned.slice(2);
-      if (number.length === 9) {
-        return `+46 ${number.slice(0, 2)} ${number.slice(2, 5)} ${number.slice(5, 7)} ${number.slice(7)}`;
-      }
+      // International format
+      return `+${cleaned}`;
+    } else if (cleaned.startsWith('07') || cleaned.startsWith('08')) {
+      // Mobile or Stockholm landline
+      return cleaned.replace(/(\d{3})(\d{3})(\d{2})(\d{2})/, '$1-$2 $3 $4');
     }
     
-    if (cleaned.startsWith('07') && cleaned.length === 10) {
-      // Mobile number 07X-XXX XX XX
-      return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 6)} ${cleaned.slice(6, 8)} ${cleaned.slice(8)}`;
-    }
-    
-    if (cleaned.startsWith('08') && cleaned.length === 10) {
-      // Stockholm area 08-XXX XX XX
-      return `${cleaned.slice(0, 2)}-${cleaned.slice(2, 5)} ${cleaned.slice(5, 7)} ${cleaned.slice(7)}`;
-    }
-    
-    // Default formatting
     return phone;
-  }
-  
-  /**
-   * Validates Swedish phone number
-   */
-  export function isValidPhoneNumber(phone: string): boolean {
-    const cleaned = phone.replace(/\D/g, '');
-    
-    // Swedish mobile (07X) or landline patterns
-    return /^(07[0-9]{8}|08[0-9]{8}|0[1-9][0-9]{7,8})$/.test(cleaned) ||
-           /^46[0-9]{8,9}$/.test(cleaned);
-  }
-  
-  // ============================================================================
-  // EMAIL UTILITIES
-  // ============================================================================
-  
-  /**
-   * Validates email format
-   */
-  export function isValidEmail(email: string): boolean {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  }
-  
-  /**
-   * Masks email for privacy (e.g., j***@example.com)
-   */
-  export function maskEmail(email: string): string {
-    const [local, domain] = email.split('@');
-    const maskedLocal = local.charAt(0) + '*'.repeat(Math.max(0, local.length - 2)) + (local.length > 1 ? local.slice(-1) : '');
-    return `${maskedLocal}@${domain}`;
   }
   
   // ============================================================================
@@ -252,42 +159,8 @@ import type {
   /**
    * Gets customer status configuration
    */
-  export function getCustomerStatusInfo(status: CustomerStatus) {
+  export function getCustomerStatusConfig(status: CustomerStatus) {
     return CUSTOMER_STATUS_CONFIG[status];
-  }
-  
-  /**
-   * Gets customer display name with fallback
-   */
-  export function getCustomerDisplayName(customer: Customer): string {
-    return customer.name || 'Namnlös kund';
-  }
-  
-  /**
-   * Calculates customer priority score based on various factors
-   */
-  export function calculateCustomerPriority(customer: Customer): number {
-    let score = 0;
-    
-    // Base priority
-    if (customer.priority === 'high') score += 10;
-    else if (customer.priority === 'medium') score += 5;
-    
-    // Status urgency
-    if (customer.status === 'not_handled') score += 8;
-    else if (customer.status === 'meeting') score += 6;
-    else if (customer.status === 'sales') score += 4;
-    
-    // Time factor (older customers get higher priority)
-    const daysSinceCreated = Math.floor((Date.now() - new Date(customer.createdAt).getTime()) / (1000 * 60 * 60 * 24));
-    if (daysSinceCreated > 7) score += 3;
-    if (daysSinceCreated > 14) score += 2;
-    
-    // Estimated value factor
-    if (customer.estimatedValue && customer.estimatedValue > 50000) score += 5;
-    else if (customer.estimatedValue && customer.estimatedValue > 25000) score += 3;
-    
-    return score;
   }
   
   /**
@@ -295,41 +168,60 @@ import type {
    */
   export function filterCustomers(customers: Customer[], filters: FilterState): Customer[] {
     return customers.filter(customer => {
+      // Search filter
+      if (filters.search && filters.search.trim()) {
+        const searchLower = filters.search.toLowerCase();
+        const searchableFields = [
+          customer.name,
+          customer.address || '',
+          customer.phone,
+          customer.email || ''
+        ];
+        
+        const matchesSearch = searchableFields.some(field => 
+          field.toLowerCase().includes(searchLower)
+        );
+        
+        if (!matchesSearch) return false;
+      }
+      
       // Status filter
-      if (filters.status.length > 0 && !filters.status.includes(customer.status)) {
-        return false;
+      if (filters.status && filters.status.length > 0) {
+        if (!filters.status.includes(customer.status)) return false;
       }
       
       // Assigned to filter
-      if (filters.assignedTo.length > 0 && customer.assignedTo && !filters.assignedTo.includes(customer.assignedTo)) {
-        return false;
-      }
-      
-      // Priority filter
-      if (filters.priority.length > 0 && !filters.priority.includes(customer.priority)) {
-        return false;
-      }
-      
-      // Date range filter
-      if (filters.dateRange) {
-        const createdDate = new Date(customer.createdAt);
-        const fromDate = new Date(filters.dateRange.from);
-        const toDate = new Date(filters.dateRange.to);
-        
-        if (createdDate < fromDate || createdDate > toDate) {
+      if (filters.assignedTo && filters.assignedTo.length > 0) {
+        if (!customer.assignedTo || !filters.assignedTo.includes(customer.assignedTo)) {
           return false;
         }
       }
       
-      // Search filter
-      if (filters.search) {
+      // Priority filter
+      if (filters.priority && filters.priority.length > 0) {
+        if (!filters.priority.includes(customer.priority)) return false;
+      }
+      
+      // Date range filter
+      if (filters.dateRange) {
+        const customerDate = new Date(customer.createdAt);
+        const startDate = new Date(filters.dateRange.start);
+        const endDate = new Date(filters.dateRange.end);
+        
+        if (customerDate < startDate || customerDate > endDate) {
+          return false;
+        }
+      }
+      
+      // Address filter (check if address exists before filtering)
+      if (customer.address && filters.search) {
         const searchLower = filters.search.toLowerCase();
-        return (
-          customer.name.toLowerCase().includes(searchLower) ||
-          customer.address.toLowerCase().includes(searchLower) ||
-          customer.phone.includes(searchLower) ||
-          (customer.email && customer.email.toLowerCase().includes(searchLower))
-        );
+        return customer.address.toLowerCase().includes(searchLower);
+      }
+      
+      // Phone filter (check if phone exists before filtering)
+      if (customer.phone && filters.search) {
+        return customer.phone.includes(filters.search);
       }
       
       return true;
@@ -341,17 +233,15 @@ import type {
    */
   export function sortCustomers(customers: Customer[], sort: SortState): Customer[] {
     return [...customers].sort((a, b) => {
-      let aValue: string | number | Date | undefined;
-      let bValue: string | number | Date | undefined;
+      let aValue: unknown;
+      let bValue: unknown;
       
       if (sort.field === 'createdAt' || sort.field === 'updatedAt') {
         aValue = new Date(a[sort.field]).getTime();
         bValue = new Date(b[sort.field]).getTime();
       } else {
-        const aFieldValue = a[sort.field as keyof Customer];
-        const bFieldValue = b[sort.field as keyof Customer];
-        aValue = typeof aFieldValue === 'string' || typeof aFieldValue === 'number' ? aFieldValue : String(aFieldValue || '');
-        bValue = typeof bFieldValue === 'string' || typeof bFieldValue === 'number' ? bFieldValue : String(bFieldValue || '');
+        aValue = a[sort.field as keyof Customer];
+        bValue = b[sort.field as keyof Customer];
       }
       
       // Handle null/undefined values
@@ -380,7 +270,7 @@ import type {
     daysSinceLastActivity: number;
   } {
     const activities = customer.activities || [];
-    const recentActivity = activities.sort((a: CustomerActivity, b: CustomerActivity) => 
+    const recentActivity = activities.sort((a, b) => 
       new Date(b.performedAt).getTime() - new Date(a.performedAt).getTime()
     )[0];
     
@@ -493,80 +383,60 @@ import type {
       type,
       title,
       message,
-      duration: duration || (type === 'error' ? 8000 : 4000),
+      duration: duration || (type === 'error' ? 8000 : 5000),
       createdAt: new Date().toISOString()
     };
   }
   
   // ============================================================================
-  // UTILITY FUNCTIONS
+  // ARRAY UTILITIES
   // ============================================================================
   
   /**
-   * Generates a unique ID
+   * Groups array of objects by a key
    */
-  export function generateId(): string {
-    return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+  export function groupBy<T>(array: T[], key: keyof T): Record<string, T[]> {
+    return array.reduce((groups, item) => {
+      const group = String(item[key]);
+      if (!groups[group]) {
+        groups[group] = [];
+      }
+      groups[group].push(item);
+      return groups;
+    }, {} as Record<string, T[]>);
   }
   
   /**
-   * Debounce function for search and other inputs
+   * Removes duplicates from array based on a key
+   */
+  export function uniqueBy<T>(array: T[], key: keyof T): T[] {
+    const seen = new Set();
+    return array.filter(item => {
+      const value = item[key];
+      if (seen.has(value)) {
+        return false;
+      }
+      seen.add(value);
+      return true;
+    });
+  }
+  
+  /**
+   * Debounces a function call
    */
   export function debounce<T extends (...args: unknown[]) => unknown>(
     func: T,
-    delay: number
+    wait: number
   ): (...args: Parameters<T>) => void {
-    let timeoutId: NodeJS.Timeout;
-    return (...args: Parameters<T>) => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => func(...args), delay);
+    let timeout: NodeJS.Timeout;
+    
+    return function executedFunction(...args: Parameters<T>) {
+      const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+      };
+      
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
     };
-  }
-  
-  /**
-   * Deep clone an object
-   */
-  export function deepClone<T>(obj: T): T {
-    if (obj === null || typeof obj !== 'object') return obj;
-    if (obj instanceof Date) return new Date(obj.getTime()) as T;
-    if (obj instanceof Array) return obj.map(item => deepClone(item)) as T;
-    if (typeof obj === 'object') {
-      const clonedObj = {} as T;
-      for (const key in obj) {
-        if (obj.hasOwnProperty(key)) {
-          clonedObj[key] = deepClone(obj[key]);
-        }
-      }
-      return clonedObj;
-    }
-    return obj;
-  }
-  
-  /**
-   * Sleep utility for delays
-   */
-  export function sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
-  
-  /**
-   * Safe JSON parse with fallback
-   */
-  export function safeParse<T>(jsonString: string, fallback: T): T {
-    try {
-      return JSON.parse(jsonString);
-    } catch {
-      return fallback;
-    }
-  }
-  
-  /**
-   * Checks if value is empty (null, undefined, empty string, empty array, empty object)
-   */
-  export function isEmpty(value: unknown): boolean {
-    if (value == null) return true;
-    if (typeof value === 'string') return value.trim() === '';
-    if (Array.isArray(value)) return value.length === 0;
-    if (typeof value === 'object') return Object.keys(value).length === 0;
-    return false;
   }

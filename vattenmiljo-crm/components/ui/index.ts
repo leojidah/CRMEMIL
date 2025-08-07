@@ -1,107 +1,173 @@
 // ============================================================================
-// UI COMPONENTS INDEX - Export All Components
+// UI COMPONENTS INDEX - Component Exports
 // ============================================================================
 
-// Badge Components
+// ============================================================================
+// FORM COMPONENTS
+// ============================================================================
 export {
-  default as Badge,
-  StatusBadge,
-  PriorityBadge,
-  NotificationBadge,
-  BadgeGroup,
-  ActivityBadge
-} from './badge';
-
-export type {
-  BadgeProps,
-  StatusBadgeProps,
-  PriorityBadgeProps
-} from './badge';
-
-// Button Components
-export {
-  default as Button,
-  IconButton,
-  ButtonGroup,
-  CTAButton,
-  LinkButton,
-  LoadingButton,
-  ButtonIcons
-} from './button';
-
-export type {
-  ButtonProps,
-  IconButtonProps,
-  ButtonGroupProps
-} from './button';
-
-// Card Components
-export {
-  default as Card,
-  CardHeader,
-  CardBody,
-  CardFooter,
-  StatsCard,
-  CustomerCard,
-  MetricCard,
-  EmptyStateCard
-} from './card';
-
-export type {
-  CardProps,
-  StatsCardProps,
-  CustomerCardProps
-} from './card';
-
-// Input Components
-export {
-  default as Input,
-  Textarea,
-  Select,
-  PhoneInput,
-  SearchInput
-} from './input';
-
-export type {
-  InputProps,
-  TextareaProps,
-  SelectProps
-} from './input';
-
-// Modal Components
-export {
-  default as Modal,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  ConfirmModal,
-  Drawer
-} from './modal';
-
-export type {
-  ModalProps,
-  ConfirmModalProps,
-  DrawerProps
-} from './modal';
-
-// Table Components
-export {
-  default as Table,
-  Pagination
-} from './table';
-
-export type {
-  TableProps,
-  Column,
-  PaginationProps
-} from './table';
-
-// All components are available via direct imports or re-exports
-
-// Re-export everything for backward compatibility
-export * from './badge';
-export * from './button';
-export * from './card';
-export * from './input';
-export * from './modal';
-export * from './table';
+    Input,
+    Textarea,
+    Select,
+    Checkbox,
+    Radio,
+    RadioGroup,
+    type InputProps,
+    type TextareaProps,
+    type SelectProps,
+    type CheckboxProps,
+    type RadioProps,
+    type RadioGroupProps
+  } from './input';
+  
+  // ============================================================================
+  // LAYOUT COMPONENTS
+  // ============================================================================
+  export {
+    Card,
+    CardHeader,
+    CardBody,
+    CardFooter,
+    StatsCard,
+    FeatureCard,
+    CardSkeleton,
+    type CardProps,
+    type CardHeaderProps,
+    type CardBodyProps,
+    type CardFooterProps,
+    type StatsCardProps,
+    type FeatureCardProps
+  } from './card';
+  
+  // ============================================================================
+  // DATA DISPLAY COMPONENTS
+  // ============================================================================
+  export {
+    Table,
+    Pagination,
+    type TableProps,
+    type Column,
+    type PaginationProps
+  } from './table';
+  
+  export {
+    Badge,
+    type BadgeProps,
+    type StatusBadgeProps,
+    type PriorityBadgeProps
+  } from './badge';
+  
+  // ============================================================================
+  // FEEDBACK COMPONENTS
+  // ============================================================================
+  export {
+    Modal,
+    ModalHeader,
+    ModalBody,
+    ModalFooter,
+    ConfirmModal,
+    Drawer,
+    type ModalProps,
+    type ModalHeaderProps,
+    type ModalBodyProps,
+    type ModalFooterProps,
+    type ConfirmModalProps,
+    type DrawerProps
+  } from './modal';
+  
+  // ============================================================================
+  // NAVIGATION COMPONENTS
+  // ============================================================================
+  export {
+    Button,
+    ButtonGroup,
+    IconButton,
+    type ButtonProps,
+    type ButtonGroupProps,
+    type IconButtonProps
+  } from './button';
+  
+  // ============================================================================
+  // UTILITY COMPONENTS
+  // ============================================================================
+  export {
+    Spinner,
+    LoadingSpinner,
+    SkeletonLoader,
+    type SpinnerProps,
+    type LoadingSpinnerProps,
+    type SkeletonLoaderProps
+  } from './loading';
+  
+  export {
+    Toast,
+    ToastProvider,
+    useToast,
+    type ToastProps,
+    type ToastContextType
+  } from './toast';
+  
+  export {
+    Tooltip,
+    type TooltipProps
+  } from './tooltip';
+  
+  export {
+    Dropdown,
+    DropdownMenu,
+    DropdownItem,
+    type DropdownProps,
+    type DropdownMenuProps,
+    type DropdownItemProps
+  } from './dropdown';
+  
+  // ============================================================================
+  // LAYOUT UTILITIES
+  // ============================================================================
+  export {
+    Container,
+    Grid,
+    GridItem,
+    Stack,
+    Divider,
+    type ContainerProps,
+    type GridProps,
+    type GridItemProps,
+    type StackProps,
+    type DividerProps
+  } from './layout';
+  
+  // ============================================================================
+  // FORM UTILITIES
+  // ============================================================================
+  export {
+    FormGroup,
+    FormLabel,
+    FormError,
+    FormHint,
+    type FormGroupProps,
+    type FormLabelProps,
+    type FormErrorProps,
+    type FormHintProps
+  } from './form';
+  
+  // ============================================================================
+  // RE-EXPORTS FOR CONVENIENCE
+  // ============================================================================
+  export type {
+    // Common component props
+    ComponentProps,
+    ComponentPropsWithoutRef,
+    ComponentPropsWithRef,
+  } from 'react';
+  
+  // Size variants used across components
+  export type Size = 'sm' | 'md' | 'lg';
+  export type Variant = 'default' | 'primary' | 'secondary' | 'success' | 'warning' | 'error';
+  export type ColorScheme = 'neutral' | 'primary' | 'success' | 'warning' | 'error';
+  
+  // Common utility types
+  export type Direction = 'horizontal' | 'vertical';
+  export type Placement = 'top' | 'bottom' | 'left' | 'right';
+  export type Alignment = 'start' | 'center' | 'end';
+  export type Spacing = 'none' | 'sm' | 'md' | 'lg' | 'xl';
