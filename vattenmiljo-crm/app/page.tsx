@@ -226,7 +226,7 @@ export default function VattenmiljoCRM() {
     });
   };
 
-  // Filter customers based on role and filters
+  // Filter customers based on role and filters - ÄNDRING 1: Uppdaterad logik för visibility
   const filteredCustomers = customers.filter(customer => {
     const matchesSearch = customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          customer.phone.includes(searchTerm) ||
@@ -234,18 +234,30 @@ export default function VattenmiljoCRM() {
     
     const matchesStatus = statusFilter === 'all' || customer.status === statusFilter;
 
-    // Role-based filtering
-    if (currentUser.role === 'salesperson') {
+    // Om det finns sökterm, visa alla sökbara resultat
+    if (searchTerm.trim().length > 0) {
       return matchesSearch && matchesStatus;
-    } else if (currentUser.role === 'internal') {
-      // Intern personal ser kunder från "sales" status som "not_handled" och "done" som "completed"
-      return matchesSearch && (customer.status === 'sales' || customer.status === 'done');
-    } else if (currentUser.role === 'installer') {
-      // Montörer ser kunder som är "done" eller "installed"
-      return matchesSearch && (customer.status === 'done' || customer.status === 'installed');
     }
 
-    return matchesSearch && matchesStatus;
+    // Annars, visa bara kunder som användaren har action på
+    const hasAction = () => {
+      // Om kunden är assignad till aktuell användare
+      if (customer.assignedTo === currentUser.id) return true;
+      
+      // Rollbaserad action-logik
+      if (currentUser.role === 'salesperson') {
+        return customer.status === 'not_handled' || 
+               customer.status === 'meeting' || 
+               customer.status === 'sales';
+      } else if (currentUser.role === 'internal') {
+        return customer.status === 'sales'; // Behöver behandla försäljning
+      } else if (currentUser.role === 'installer') {
+        return customer.status === 'done' || customer.status === 'installed'; // Behöver installera eller redan installerat
+      }
+      return false;
+    };
+
+    return matchesStatus && hasAction();
   });
 
   // Get role-specific view of customer status
@@ -673,22 +685,9 @@ export default function VattenmiljoCRM() {
           )}
         </div>
 
-        {/* Stats Cards */}
+        {/* Stats Cards - ÄNDRING 2: Omordning av statuskort */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-          <div className="bg-white rounded-lg p-6 border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Redo för installation</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {customers.filter(c => c.status === 'done').length}
-                </p>
-              </div>
-              <div className="p-3 bg-green-100 rounded-lg">
-                <CheckCircle2 className="w-6 h-6 text-green-600" />
-              </div>
-            </div>
-          </div>
-
+          {/* 1. Totalt kunder */}
           <div className="bg-white rounded-lg p-6 border border-gray-200">
             <div className="flex items-center justify-between">
               <div>
@@ -701,6 +700,7 @@ export default function VattenmiljoCRM() {
             </div>
           </div>
 
+          {/* 2. Ej hanterade */}
           <div className="bg-white rounded-lg p-6 border border-gray-200">
             <div className="flex items-center justify-between">
               <div>
@@ -715,6 +715,7 @@ export default function VattenmiljoCRM() {
             </div>
           </div>
 
+          {/* 3. Pågående försäljning */}
           <div className="bg-white rounded-lg p-6 border border-gray-200">
             <div className="flex items-center justify-between">
               <div>
@@ -729,6 +730,22 @@ export default function VattenmiljoCRM() {
             </div>
           </div>
 
+          {/* 4. Redo för installation */}
+          <div className="bg-white rounded-lg p-6 border border-gray-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Redo för installation</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {customers.filter(c => c.status === 'done').length}
+                </p>
+              </div>
+              <div className="p-3 bg-green-100 rounded-lg">
+                <CheckCircle2 className="w-6 h-6 text-green-600" />
+              </div>
+            </div>
+          </div>
+
+          {/* 5. Installationer klara */}
           <div className="bg-white rounded-lg p-6 border border-gray-200">
             <div className="flex items-center justify-between">
               <div>
