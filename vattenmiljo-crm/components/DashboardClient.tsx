@@ -1,10 +1,10 @@
 'use client';
 
 // ============================================================================
-// DASHBOARD CLIENT - Interactive Dashboard Component
+// ENHANCED DASHBOARD CLIENT - Interactive Dashboard Component
 // ============================================================================
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Users, 
   Calendar, 
@@ -23,7 +23,11 @@ import {
   Filter,
   Download,
   Home,
-  ChevronRight
+  ChevronRight,
+  Euro,
+  Target,
+  Award,
+  Sparkles
 } from 'lucide-react';
 
 // ============================================================================
@@ -52,6 +56,8 @@ interface Activity {
   time: string;
   avatar: string;
   color: string;
+  performedBy: string;
+  createdAt?: string; // ISO date string for better time formatting
 }
 
 interface NavigationItem {
@@ -73,6 +79,122 @@ interface DashboardClientProps {
   activities: Activity[];
 }
 
+interface MonthlyData {
+  newCustomers: number;
+  completedProjects: number;
+  revenue: number;
+  previousMonth: {
+    newCustomers: number;
+    completedProjects: number;
+    revenue: number;
+  };
+}
+
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
+
+/**
+ * Enhanced relative time formatting with more precision
+ */
+function formatDetailedRelativeTime(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+  if (diffInSeconds < 60) {
+    return 'Just nu';
+  }
+
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  if (diffInMinutes < 60) {
+    return `${diffInMinutes} minut${diffInMinutes > 1 ? 'er' : ''} sedan`;
+  }
+
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) {
+    return `${diffInHours} timme${diffInHours > 1 ? 'r' : ''} sedan`;
+  }
+
+  const diffInDays = Math.floor(diffInHours / 24);
+  if (diffInDays < 7) {
+    return `${diffInDays} dag${diffInDays > 1 ? 'ar' : ''} sedan`;
+  }
+
+  const diffInWeeks = Math.floor(diffInDays / 7);
+  if (diffInWeeks < 4) {
+    return `${diffInWeeks} vecka${diffInWeeks > 1 ? 'r' : ''} sedan`;
+  }
+
+  const diffInMonths = Math.floor(diffInDays / 30);
+  if (diffInMonths < 12) {
+    return `${diffInMonths} månad${diffInMonths > 1 ? 'er' : ''} sedan`;
+  }
+
+  const diffInYears = Math.floor(diffInMonths / 12);
+  return `${diffInYears} år sedan`;
+}
+
+/**
+ * Get current month data with automatic calculations
+ */
+function useMonthlyData(): MonthlyData {
+  return useMemo(() => {
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth();
+    const currentYear = currentDate.getFullYear();
+    
+    // Simulate real data - in production, this would come from your API
+    const baseCustomers = 8 + Math.floor(Math.random() * 8);
+    const baseProjects = 5 + Math.floor(Math.random() * 6);
+    const baseRevenue = 1.8 + Math.random() * 1.2;
+    
+    // Add some variation based on month
+    const monthMultiplier = 1 + (Math.sin(currentMonth) * 0.2);
+    
+    return {
+      newCustomers: Math.floor(baseCustomers * monthMultiplier),
+      completedProjects: Math.floor(baseProjects * monthMultiplier),
+      revenue: Math.round(baseRevenue * monthMultiplier * 10) / 10,
+      previousMonth: {
+        newCustomers: baseCustomers - Math.floor(Math.random() * 4),
+        completedProjects: baseProjects - Math.floor(Math.random() * 3),
+        revenue: Math.round((baseRevenue - 0.2 - Math.random() * 0.4) * 10) / 10
+      }
+    };
+  }, []);
+}
+
+/**
+ * Get current month name in Swedish
+ */
+function getCurrentMonthName(): string {
+  const months = [
+    'Januari', 'Februari', 'Mars', 'April', 'Maj', 'Juni',
+    'Juli', 'Augusti', 'September', 'Oktober', 'November', 'December'
+  ];
+  return months[new Date().getMonth()];
+}
+
+/**
+ * Calculate percentage change
+ */
+function calculatePercentageChange(current: number, previous: number): number {
+  if (previous === 0) return current > 0 ? 100 : 0;
+  return Math.round(((current - previous) / previous) * 100);
+}
+
+/**
+ * Generate user initials from name
+ */
+function generateInitials(name: string): string {
+  return name
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase())
+    .slice(0, 2)
+    .join('');
+}
+
 // ============================================================================
 // ICON MAPPING
 // ============================================================================
@@ -85,62 +207,221 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   BarChart3,
   FileText,
   Settings,
+  Euro,
+  Target,
+  Award,
 };
 
 // ============================================================================
-// COMPONENTS
+// ENHANCED COMPONENTS
 // ============================================================================
 
-const KPICard: React.FC<{ data: KPIData }> = ({ data }) => {
+const EnhancedKPICard: React.FC<{ data: KPIData }> = ({ data }) => {
   const Icon = iconMap[data.icon as keyof typeof iconMap] || Users;
   const isPositive = data.change.direction === 'up';
+  const isNeutral = data.change.direction === 'neutral';
   
   return (
-    <div className="card-hover animate-fade-in">
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <p className="text-sm font-medium text-gray-600 mb-2">{data.title}</p>
-          <p className="text-3xl font-bold text-gray-900 mb-3">{data.value}</p>
-          <div className="flex items-center space-x-2">
-            <div className={`flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium ${
-              isPositive 
-                ? 'bg-green-100 text-green-700' 
-                : data.change.direction === 'down'
-                ? 'bg-red-100 text-red-700'
-                : 'bg-gray-100 text-gray-700'
-            }`}>
-              {isPositive ? (
-                <ArrowUpRight className="w-3 h-3" />
-              ) : data.change.direction === 'down' ? (
-                <ArrowDownRight className="w-3 h-3" />
-              ) : (
-                <div className="w-3 h-0.5 bg-current rounded" />
-              )}
-              <span>{data.change.value}</span>
+    <div className="relative group cursor-pointer">
+      <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 rounded-3xl opacity-0 group-hover:opacity-10 transition-opacity duration-300" />
+      <div className="relative bg-white rounded-3xl p-6 shadow-sm border border-gray-100 hover:shadow-xl hover:border-gray-200 transition-all duration-300 hover:-translate-y-1">
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <div className="flex items-center space-x-2 mb-3">
+              <p className="text-sm font-semibold text-gray-700">{data.title}</p>
+              <Sparkles className="w-4 h-4 text-gray-300" />
             </div>
-            <span className="text-xs text-gray-500">{data.change.period}</span>
+            <p className="text-4xl font-black text-gray-900 mb-4 tracking-tight">{data.value}</p>
+            <div className="flex items-center space-x-3">
+              <div className={`flex items-center space-x-1 px-3 py-1.5 rounded-xl text-sm font-bold shadow-sm ${
+                isPositive 
+                  ? 'bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 border border-green-200' 
+                  : isNeutral
+                  ? 'bg-gradient-to-r from-gray-100 to-slate-100 text-gray-700 border border-gray-200'
+                  : 'bg-gradient-to-r from-red-100 to-rose-100 text-red-700 border border-red-200'
+              }`}>
+                {isPositive ? (
+                  <ArrowUpRight className="w-4 h-4" />
+                ) : isNeutral ? (
+                  <div className="w-4 h-0.5 bg-current rounded" />
+                ) : (
+                  <ArrowDownRight className="w-4 h-4" />
+                )}
+                <span>{Math.abs(data.change.value)}%</span>
+              </div>
+              <span className="text-sm text-gray-500 font-medium">{data.change.period}</span>
+            </div>
           </div>
-        </div>
-        <div className={`w-14 h-14 rounded-xl bg-gradient-to-r ${data.color} flex items-center justify-center shadow-lg`}>
-          <Icon className="w-7 h-7 text-white" />
+          <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${data.color} flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-110`}>
+            <Icon className="w-8 h-8 text-white" />
+          </div>
         </div>
       </div>
     </div>
   );
 };
 
-const ActivityItem: React.FC<{ activity: Activity }> = ({ activity }) => (
-  <div className="flex items-start space-x-4 p-4 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer">
-    <div className={`w-10 h-10 rounded-full ${activity.color} flex items-center justify-center text-white text-xs font-bold shadow-lg`}>
-      {activity.avatar}
+const EnhancedActivityItem: React.FC<{ activity: Activity }> = ({ activity }) => {
+  const initials = generateInitials(activity.performedBy || activity.avatar);
+  const timeString = activity.createdAt || activity.time;
+  const formattedTime = formatDetailedRelativeTime(timeString);
+  
+  return (
+    <div className="flex items-start space-x-4 p-5 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 rounded-2xl transition-all duration-200 cursor-pointer group">
+      <div className={`w-12 h-12 rounded-2xl ${activity.color} flex items-center justify-center text-white text-sm font-bold shadow-lg group-hover:shadow-xl group-hover:scale-105 transition-all duration-200`}>
+        {initials}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <p className="text-sm font-bold text-gray-900 group-hover:text-blue-900 transition-colors">
+              {activity.title}
+            </p>
+            <p className="text-sm text-gray-600 mt-1 leading-relaxed">{activity.description}</p>
+          </div>
+        </div>
+        <div className="flex items-center space-x-3 mt-3">
+          <p className="text-xs font-semibold text-gray-500 bg-gray-100 px-2 py-1 rounded-lg">
+            {formattedTime}
+          </p>
+          <p className="text-xs text-gray-400">
+            av {activity.performedBy || 'Okänd användare'}
+          </p>
+        </div>
+      </div>
     </div>
-    <div className="flex-1 min-w-0">
-      <p className="text-sm font-semibold text-gray-900">{activity.title}</p>
-      <p className="text-sm text-gray-600 mt-1">{activity.description}</p>
-      <p className="text-xs text-gray-400 mt-2">{activity.time}</p>
+  );
+};
+
+const MonthlyResults: React.FC = () => {
+  const monthlyData = useMonthlyData();
+  const currentMonth = getCurrentMonthName();
+  
+  const newCustomersChange = calculatePercentageChange(
+    monthlyData.newCustomers, 
+    monthlyData.previousMonth.newCustomers
+  );
+  const projectsChange = calculatePercentageChange(
+    monthlyData.completedProjects, 
+    monthlyData.previousMonth.completedProjects
+  );
+  const revenueChange = calculatePercentageChange(
+    monthlyData.revenue, 
+    monthlyData.previousMonth.revenue
+  );
+  
+  const overallChange = Math.round((newCustomersChange + projectsChange + revenueChange) / 3);
+  
+  return (
+    <div className="bg-gradient-to-br from-purple-600 via-purple-700 to-indigo-800 rounded-3xl p-8 text-white shadow-2xl relative overflow-hidden">
+      {/* Background decoration */}
+      <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-8 translate-x-8" />
+      <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-4 -translate-x-4" />
+      
+      <div className="relative">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-2xl font-black tracking-tight">
+            {currentMonth}s resultat
+          </h3>
+          <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm">
+            <TrendingUp className="w-6 h-6" />
+          </div>
+        </div>
+        
+        <div className="space-y-6">
+          <div className="flex items-center justify-between group">
+            <span className="text-purple-100 font-medium group-hover:text-white transition-colors">
+              Nya kunder
+            </span>
+            <div className="flex items-center space-x-3">
+              <span className="text-3xl font-black">
+                +{monthlyData.newCustomers}
+              </span>
+              <div className={`flex items-center space-x-1 px-2 py-1 rounded-lg text-xs font-bold ${
+                newCustomersChange >= 0 
+                  ? 'bg-green-500/20 text-green-200' 
+                  : 'bg-red-500/20 text-red-200'
+              }`}>
+                {newCustomersChange >= 0 ? (
+                  <ArrowUpRight className="w-3 h-3" />
+                ) : (
+                  <ArrowDownRight className="w-3 h-3" />
+                )}
+                <span>{Math.abs(newCustomersChange)}%</span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex items-center justify-between group">
+            <span className="text-purple-100 font-medium group-hover:text-white transition-colors">
+              Avslutade projekt
+            </span>
+            <div className="flex items-center space-x-3">
+              <span className="text-3xl font-black">
+                {monthlyData.completedProjects}
+              </span>
+              <div className={`flex items-center space-x-1 px-2 py-1 rounded-lg text-xs font-bold ${
+                projectsChange >= 0 
+                  ? 'bg-green-500/20 text-green-200' 
+                  : 'bg-red-500/20 text-red-200'
+              }`}>
+                {projectsChange >= 0 ? (
+                  <ArrowUpRight className="w-3 h-3" />
+                ) : (
+                  <ArrowDownRight className="w-3 h-3" />
+                )}
+                <span>{Math.abs(projectsChange)}%</span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex items-center justify-between group">
+            <span className="text-purple-100 font-medium group-hover:text-white transition-colors">
+              Intäkter
+            </span>
+            <div className="flex items-center space-x-3">
+              <span className="text-3xl font-black">
+                {monthlyData.revenue}M
+              </span>
+              <div className={`flex items-center space-x-1 px-2 py-1 rounded-lg text-xs font-bold ${
+                revenueChange >= 0 
+                  ? 'bg-green-500/20 text-green-200' 
+                  : 'bg-red-500/20 text-red-200'
+              }`}>
+                {revenueChange >= 0 ? (
+                  <ArrowUpRight className="w-3 h-3" />
+                ) : (
+                  <ArrowDownRight className="w-3 h-3" />
+                )}
+                <span>{Math.abs(revenueChange)}%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="mt-8 pt-6 border-t border-purple-400/30">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-purple-200 font-medium">
+              Jämfört med förra månaden
+            </span>
+            <div className={`flex items-center space-x-2 font-bold ${
+              overallChange >= 0 ? 'text-green-300' : 'text-red-300'
+            }`}>
+              {overallChange >= 0 ? (
+                <ArrowUpRight className="w-5 h-5" />
+              ) : (
+                <ArrowDownRight className="w-5 h-5" />
+              )}
+              <span className="text-lg">
+                {overallChange >= 0 ? '+' : ''}{overallChange}%
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const SidebarContent: React.FC<SidebarContentProps> = ({ 
   navigation, 
@@ -206,7 +487,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
 // MAIN DASHBOARD CLIENT COMPONENT
 // ============================================================================
 
-export const DashboardClient: React.FC<DashboardClientProps> = ({ kpis, activities }) => {
+export const EnhancedDashboardClient: React.FC<DashboardClientProps> = ({ kpis, activities }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
@@ -229,44 +510,40 @@ export const DashboardClient: React.FC<DashboardClientProps> = ({ kpis, activiti
     <>
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <div 
-            className="fixed inset-0 bg-gray-600 bg-opacity-75 transition-opacity" 
-            onClick={() => setSidebarOpen(false)} 
-          />
-          <div className="fixed left-0 top-0 bottom-0 w-80 bg-white shadow-xl transform transition-transform">
+        <div className="fixed inset-0 z-40 lg:hidden">
+          <div className="absolute inset-0 bg-gray-600 bg-opacity-75" onClick={() => setSidebarOpen(false)} />
+          <div className="relative flex flex-col w-full max-w-xs bg-white">
             <SidebarContent 
               navigation={navigation} 
-              activeTab={activeTab}
+              activeTab={activeTab} 
               setActiveTab={setActiveTab}
-              closeSidebar={() => setSidebarOpen(false)} 
+              closeSidebar={() => setSidebarOpen(false)}
             />
           </div>
         </div>
       )}
 
       {/* Desktop sidebar */}
-      <div className="hidden lg:flex lg:w-80 lg:flex-col lg:fixed lg:inset-y-0 z-40">
+      <div className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0">
         <SidebarContent 
           navigation={navigation} 
-          activeTab={activeTab}
+          activeTab={activeTab} 
           setActiveTab={setActiveTab}
         />
       </div>
 
       {/* Main content */}
-      <div className="lg:pl-80">
-        {/* Top header */}
-        <header className="sticky top-0 z-30 glass border-b border-gray-200">
+      <div className="lg:pl-64 flex flex-col min-h-screen">
+        <header className="sticky top-0 z-30 bg-white border-b border-gray-200">
           <div className="px-4 sm:px-6 lg:px-8">
-            <div className="flex h-16 items-center justify-between">
+            <div className="flex items-center justify-between h-16">
               <div className="flex items-center space-x-4">
                 <button
                   onClick={() => setSidebarOpen(true)}
                   className="lg:hidden p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-colors"
-                  aria-label="Öppna meny"
+                  type="button"
                 >
-                  <Menu className="w-6 h-6" />
+                  <Menu className="w-5 h-5" />
                 </button>
                 
                 {/* Breadcrumb */}
@@ -321,15 +598,15 @@ export const DashboardClient: React.FC<DashboardClientProps> = ({ kpis, activiti
         </header>
 
         {/* Page content */}
-        <main className="p-4 sm:p-6 lg:p-8">
+        <main className="p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-gray-50 to-blue-50 min-h-screen">
           {/* Header section */}
-          <div className="mb-8 dashboard-enter">
+          <div className="mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                <h1 className="text-4xl font-black text-gray-900 mb-2 tracking-tight">
                   Dashboard
                 </h1>
-                <p className="text-gray-600">
+                <p className="text-gray-600 text-lg">
                   Välkommen tillbaka! Här är en överblick av dina aktiviteter.
                 </p>
               </div>
@@ -350,15 +627,15 @@ export const DashboardClient: React.FC<DashboardClientProps> = ({ kpis, activiti
             </div>
           </div>
 
-          {/* KPI Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
+          {/* Enhanced KPI Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8 mb-12">
             {kpis.map((kpi, index) => (
               <div 
                 key={kpi.id} 
-                className="kpi-card-enter"
-                style={{ animationDelay: `${index * 100}ms` }}
+                className="animate-fade-in"
+                style={{ animationDelay: `${index * 150}ms` }}
               >
-                <KPICard data={kpi} />
+                <EnhancedKPICard data={kpi} />
               </div>
             ))}
           </div>
@@ -366,82 +643,57 @@ export const DashboardClient: React.FC<DashboardClientProps> = ({ kpis, activiti
           {/* Content Grid */}
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
             {/* Recent Activity */}
-            <div className="xl:col-span-2 dashboard-enter">
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
-                <div className="p-6 border-b border-gray-100">
+            <div className="xl:col-span-2">
+              <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="p-8 border-b border-gray-100">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-bold text-gray-900">Senaste aktiviteter</h2>
+                    <h2 className="text-2xl font-black text-gray-900">Senaste aktiviteter</h2>
                     <button 
-                      className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
+                      className="text-sm text-blue-600 hover:text-blue-700 font-bold bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-xl transition-colors"
                       type="button"
                     >
                       Visa alla
                     </button>
                   </div>
                 </div>
-                <div className="p-2">
+                <div className="p-4">
                   {activities.map((activity) => (
-                    <ActivityItem key={activity.id} activity={activity} />
+                    <EnhancedActivityItem key={activity.id} activity={activity} />
                   ))}
                 </div>
               </div>
             </div>
 
-            {/* Quick Actions & Stats */}
-            <div className="space-y-6 dashboard-enter">
+            {/* Quick Actions & Monthly Results */}
+            <div className="space-y-8">
+              {/* Monthly Results */}
+              <MonthlyResults />
+              
               {/* Quick Actions */}
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                <h3 className="text-lg font-bold text-gray-900 mb-4">Snabbåtgärder</h3>
-                <div className="space-y-3">
-                  <button 
-                    className="w-full p-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all flex items-center space-x-3 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-                    type="button"
-                  >
-                    <Plus className="w-5 h-5" />
-                    <span className="font-medium">Skapa ny kund</span>
-                  </button>
-                  <button 
-                    className="w-full p-4 bg-gray-50 text-gray-700 rounded-xl hover:bg-gray-100 transition-colors flex items-center space-x-3"
-                    type="button"
-                  >
-                    <Calendar className="w-5 h-5" />
-                    <span className="font-medium">Schemalägg möte</span>
-                  </button>
-                  <button 
-                    className="w-full p-4 bg-gray-50 text-gray-700 rounded-xl hover:bg-gray-100 transition-colors flex items-center space-x-3"
-                    type="button"
-                  >
-                    <FileText className="w-5 h-5" />
-                    <span className="font-medium">Visa rapporter</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Quick Stats */}
-              <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl p-6 text-white shadow-colored-purple">
-                <h3 className="text-lg font-bold mb-4">Månadens resultat</h3>
+              <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8">
+                <h3 className="text-xl font-black text-gray-900 mb-6">Snabbåtgärder</h3>
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-purple-100">Nya kunder</span>
-                    <span className="text-2xl font-bold">+12</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-purple-100">Avslutade projekt</span>
-                    <span className="text-2xl font-bold">8</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-purple-100">Intäkter</span>
-                    <span className="text-2xl font-bold">2.4M</span>
-                  </div>
-                </div>
-                <div className="mt-6 pt-4 border-t border-purple-400">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-purple-100">Jämfört med förra månaden</span>
-                    <div className="flex items-center space-x-1 text-purple-100">
-                      <ArrowUpRight className="w-4 h-4" />
-                      <span>+15%</span>
-                    </div>
-                  </div>
+                  <button 
+                    className="w-full p-5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-2xl hover:from-blue-600 hover:to-blue-700 transition-all flex items-center space-x-3 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                    type="button"
+                  >
+                    <Plus className="w-6 h-6" />
+                    <span className="font-bold text-lg">Skapa ny kund</span>
+                  </button>
+                  <button 
+                    className="w-full p-5 bg-gray-50 text-gray-700 rounded-2xl hover:bg-gray-100 transition-colors flex items-center space-x-3 hover:shadow-md"
+                    type="button"
+                  >
+                    <Calendar className="w-6 h-6" />
+                    <span className="font-bold">Schemalägg möte</span>
+                  </button>
+                  <button 
+                    className="w-full p-5 bg-gray-50 text-gray-700 rounded-2xl hover:bg-gray-100 transition-colors flex items-center space-x-3 hover:shadow-md"
+                    type="button"
+                  >
+                    <FileText className="w-6 h-6" />
+                    <span className="font-bold">Visa rapporter</span>
+                  </button>
                 </div>
               </div>
             </div>

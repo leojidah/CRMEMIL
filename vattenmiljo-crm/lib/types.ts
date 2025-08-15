@@ -6,7 +6,18 @@
 // CUSTOMER TYPES
 // ============================================================================
 
-export type CustomerStatus = 'not_handled' | 'meeting' | 'sales' | 'done' | 'archived';
+export type CustomerStatus = 
+  | 'not_handled'
+  | 'no_answer'
+  | 'call_again' 
+  | 'not_interested'
+  | 'meeting_booked'
+  | 'quotation_stage'
+  | 'extended_water_test'
+  | 'sold'
+  | 'ready_for_installation'
+  | 'installation_complete'
+  | 'archived';
 
 export type CustomerPriority = 'low' | 'medium' | 'high';
 
@@ -24,7 +35,19 @@ export interface Customer {
   notes?: CustomerNote[];
   files?: CustomerFile[];
   activities?: CustomerActivity[];
+  meetings?: Meeting[];
+  quotations?: Quotation[];
+  installations?: Installation[];
+  waterTests?: WaterTest[];
   metadata?: Record<string, unknown>;
+  // Enhanced Kanban fields
+  needsAnalysis?: NeedsAnalysis;
+  saleAmount?: number;
+  saleDate?: string;
+  lastContactDate?: string;
+  nextFollowupDate?: string;
+  leadSource?: string;
+  waterTestResults?: Record<string, unknown>;
 }
 
 export interface CustomerNote {
@@ -73,7 +96,7 @@ export interface CustomerActivity {
 // USER TYPES
 // ============================================================================
 
-export type UserRole = 'salesperson' | 'internal' | 'installer';
+export type UserRole = 'salesperson' | 'internal' | 'installer' | 'admin';
 
 export interface User {
   id: string;
@@ -84,6 +107,30 @@ export interface User {
   isActive: boolean;
   createdAt: string;
   lastLogin?: string;
+  lastLogout?: string;
+  passwordHash?: string;
+}
+
+// Authentication types
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  avatar?: string;
+  isActive: boolean;
+}
+
+export interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
+export interface SignupData {
+  name: string;
+  email: string;
+  password: string;
+  role?: UserRole;
 }
 
 export type Permission = 
@@ -237,6 +284,160 @@ export interface ChartData {
 }
 
 // ============================================================================
+// KANBAN TYPES
+// ============================================================================
+
+export interface NeedsAnalysis {
+  waterHardness?: 'low' | 'medium' | 'high' | 'very_high';
+  chlorineTaste?: boolean;
+  ironStaining?: boolean;
+  bacteriaConcern?: boolean;
+  wellWater?: boolean;
+  installationType?: 'whole_house' | 'kitchen_only' | 'bathroom' | 'custom';
+  budgetRange?: 'under_20k' | '20k_50k' | '50k_100k' | 'over_100k';
+  timeframe?: 'immediate' | 'within_month' | 'within_3months' | 'flexible';
+  additionalNotes?: string;
+}
+
+export interface Meeting {
+  id: string;
+  customerId: string;
+  title: string;
+  scheduledAt: string;
+  durationMinutes: number;
+  meetingType: 'consultation' | 'installation' | 'followup' | 'sales';
+  status: 'scheduled' | 'completed' | 'cancelled' | 'rescheduled';
+  location?: string;
+  attendees?: string[];
+  agenda?: string;
+  outcome?: string;
+  followUpRequired: boolean;
+  followUpDate?: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Quotation {
+  id: string;
+  customerId: string;
+  quoteNumber: string;
+  totalAmount: number;
+  currency: string;
+  items: QuotationItem[];
+  status: 'draft' | 'sent' | 'accepted' | 'declined' | 'expired';
+  validUntil?: string;
+  sentAt?: string;
+  acceptedAt?: string;
+  notes?: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface QuotationItem {
+  id: string;
+  name: string;
+  description?: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+}
+
+export interface WaterTest {
+  id: string;
+  customerId: string;
+  testType: 'standard' | 'comprehensive' | 'bacteria' | 'chemical';
+  testDate: string;
+  results: WaterTestResults;
+  recommendations?: Record<string, unknown>;
+  phLevel?: number;
+  hardnessLevel?: number;
+  chlorineLevel?: number;
+  ironContent?: number;
+  bacteriaPresent?: boolean;
+  sampleLocation?: string;
+  testedBy?: string;
+  createdAt: string;
+}
+
+export interface WaterTestResults {
+  ph?: number;
+  hardness?: number;
+  chlorine?: number;
+  iron?: number;
+  bacteria?: boolean;
+  nitrates?: number;
+  pesticides?: boolean;
+  overallRating?: 'excellent' | 'good' | 'fair' | 'poor';
+  recommendations?: string[];
+}
+
+export interface Installation {
+  id: string;
+  customerId: string;
+  scheduledDate?: string;
+  completedDate?: string;
+  installerId?: string;
+  equipmentInstalled: InstallationEquipment[];
+  installationNotes?: string;
+  customerSatisfaction?: number; // 1-5 rating
+  warrantyStartDate?: string;
+  warrantyEndDate?: string;
+  status: 'scheduled' | 'in_progress' | 'completed' | 'on_hold' | 'cancelled';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface InstallationEquipment {
+  id: string;
+  name: string;
+  model?: string;
+  serialNumber?: string;
+  warrantyMonths?: number;
+}
+
+export interface Notification {
+  id: string;
+  recipientId: string;
+  customerId?: string;
+  type: 'customer_status_change' | 'meeting_reminder' | 'quotation_update' | 'installation_scheduled';
+  title: string;
+  message: string;
+  data?: Record<string, unknown>;
+  readAt?: string;
+  createdAt: string;
+  expiresAt?: string;
+}
+
+// ============================================================================
+// KANBAN BOARD TYPES
+// ============================================================================
+
+export interface KanbanColumn {
+  id: CustomerStatus;
+  title: string;
+  description?: string;
+  color: string;
+  order: number;
+  visibleToRoles: UserRole[];
+}
+
+export interface KanbanCard {
+  customer: Customer;
+  isDragging?: boolean;
+}
+
+export interface DragEndEvent {
+  active: {
+    id: string;
+  };
+  over: {
+    id: string;
+  } | null;
+}
+
+// ============================================================================
 // EXPORT GROUPED TYPES
 // ============================================================================
 
@@ -245,5 +446,9 @@ export type {
   User as UserType,
   CustomerNote as NoteType,
   CustomerFile as FileType,
-  CustomerActivity as ActivityInterface
+  CustomerActivity as ActivityInterface,
+  Meeting as MeetingType,
+  Quotation as QuotationType,
+  Installation as InstallationType,
+  WaterTest as WaterTestType
 };

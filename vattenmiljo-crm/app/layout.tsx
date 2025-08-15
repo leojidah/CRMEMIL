@@ -5,6 +5,7 @@
 import React from 'react';
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
+import SupabaseAuthProvider from '@/components/providers/SupabaseAuthProvider';
 import './globals.css';
 
 // ============================================================================
@@ -219,7 +220,9 @@ export default function RootLayout({ children }: RootLayoutProps): JSX.Element {
 
           {/* Main Content */}
           <main id="main-content" className="relative z-0">
-            {children}
+            <SupabaseAuthProvider>
+              {children}
+            </SupabaseAuthProvider>
           </main>
         </div>
 
