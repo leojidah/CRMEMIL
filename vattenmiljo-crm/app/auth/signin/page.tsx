@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/components/providers/AuthProvider'
@@ -16,10 +16,23 @@ export default function SignInPage() {
   const router = useRouter()
   const { user } = useAuth()
 
-  // Redirect if already logged in
+  // Redirect if already logged in - moved to useEffect to avoid React warning
+  useEffect(() => {
+    if (user) {
+      router.push('/dashboard')
+    }
+  }, [user, router])
+
+  // Show loading while checking auth status
   if (user) {
-    router.push('/dashboard')
-    return null
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Omdirigerar till dashboard...</p>
+        </div>
+      </div>
+    )
   }
 
   const handleSignIn = async (e: React.FormEvent) => {
