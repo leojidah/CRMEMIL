@@ -12,10 +12,21 @@ async function createAdminUser() {
   try {
     console.log('🚀 Creating admin user...\n');
     
-    const adminEmail = 'leojidah@hotmail.com';
-    const adminName = 'Leo Jidah';
-    const adminPassword = 'admin123'; // You should change this!
+    // Use environment variables for security
+    const adminEmail = process.env.ADMIN_EMAIL || 'admin@vattenmiljo.se';
+    const adminName = process.env.ADMIN_NAME || 'System Administrator';
+    const adminPassword = process.env.ADMIN_PASSWORD || generateSecurePassword();
     const adminRole = 'admin';
+    
+    function generateSecurePassword() {
+      const length = 16;
+      const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+      let password = '';
+      for (let i = 0; i < length; i++) {
+        password += charset.charAt(Math.floor(Math.random() * charset.length));
+      }
+      return password;
+    }
     
     // Check if admin user already exists
     console.log('📋 Checking if admin user exists...');
@@ -66,8 +77,11 @@ async function createAdminUser() {
     console.log('   Password:', adminPassword);
     console.log('   Role:', adminRole);
     console.log('   Name:', adminName);
-    console.log('\n🔐 IMPORTANT: Change the default password after first login!');
-    console.log('\n🚀 You can now login at: http://localhost:3000/auth/signin');
+    console.log('\n🔐 CRITICAL SECURITY WARNING:');
+    console.log('   1. CHANGE THE DEFAULT PASSWORD IMMEDIATELY AFTER FIRST LOGIN!');
+    console.log('   2. DO NOT SHARE THESE CREDENTIALS IN PRODUCTION!');
+    console.log('   3. Use environment variables for production deployment!');
+    console.log('\n🚀 You can now login at: http://localhost:3005/login');
     
     // Create some sample customers for testing
     console.log('\n📊 Creating sample customers for testing...');

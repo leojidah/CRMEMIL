@@ -37,7 +37,9 @@ export default function AuthenticatedCRM({ session }: AuthenticatedCRMProps) {
       if (statusFilter !== 'all') params.append('status', statusFilter)
       if (searchTerm) params.append('search', searchTerm)
 
-      const response = await fetch(`/api/customers?${params.toString()}`)
+      const response = await fetch(`/api/customers?${params.toString()}`, {
+        credentials: 'same-origin'
+      })
       const data = await response.json()
 
       if (response.ok) {
@@ -59,6 +61,7 @@ export default function AuthenticatedCRM({ session }: AuthenticatedCRMProps) {
       const response = await fetch(`/api/customers/${customerId}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
         body: JSON.stringify({ status: newStatus })
       })
 
@@ -204,11 +207,6 @@ export default function AuthenticatedCRM({ session }: AuthenticatedCRMProps) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* CSS Test Component */}
-      <div className="fixed top-4 left-4 bg-purple-500 text-white p-2 rounded text-sm z-50">
-        Dashboard CSS: <span className="bg-yellow-500 text-black px-2 ml-1 rounded">Test</span>
-      </div>
-      
       {/* Header */}
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

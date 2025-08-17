@@ -56,8 +56,9 @@ node scripts/create-admin.js
 Visit: http://localhost:3002/auth/signin
 
 **Admin Credentials:**
-- **Email**: leojidah@hotmail.com
-- **Password**: admin123 (change after first login!)
+- **Setup**: Run `node scripts/create-admin.js` to create admin account
+- **Security**: Use environment variables ADMIN_EMAIL and ADMIN_PASSWORD
+- **Production**: ALWAYS change default passwords immediately after first login
 
 ## 🎯 All Authentication Flows Working
 
@@ -124,11 +125,27 @@ Your authentication system is now:
 - **Well-documented** ✅
 - **Tested** ✅
 
+## 🔒 Security Requirements
+
+**Before Production Deployment:**
+1. **Set Environment Variables**:
+   ```bash
+   ADMIN_EMAIL=admin@yourcompany.com
+   ADMIN_PASSWORD=your-secure-password-here
+   ```
+2. **Security Checklist**:
+   - ✅ Use strong passwords (12+ characters, mixed case, numbers, symbols)
+   - ✅ Never commit credentials to version control
+   - ✅ Change default passwords immediately after first login
+   - ✅ Regularly audit user permissions and access
+   - ✅ Monitor API logs for suspicious activity
+
 ## 📞 Next Steps
 
 1. **Complete database setup** (5 minutes)
-2. **Create admin account** (1 minute)
-3. **Test login flow** 
-4. **Start using your Kanban CRM!**
+2. **Create admin account** (1 minute)  
+3. **Test login flow**
+4. **Change default passwords**
+5. **Start using your Kanban CRM!**
 
 **The authentication system is production-ready and fully functional! 🚀**

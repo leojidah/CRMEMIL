@@ -3,16 +3,17 @@
 import React from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { Customer, CustomerStatus, KanbanColumn } from '@/lib/types'
+import { Customer, UserRole, KanbanColumn } from '@/lib/types'
 import CustomerCard from './CustomerCard'
 
 interface KanbanColumnProps {
   column: KanbanColumn
   customers: Customer[]
-  canMoveToStatus: (customer: Customer, status: CustomerStatus) => boolean
+  userRole: UserRole
+  onCustomerUpdated?: (customer: Customer) => void
 }
 
-export default function KanbanColumnComponent({ column, customers, canMoveToStatus }: KanbanColumnProps) {
+export default function KanbanColumnComponent({ column, customers, userRole, onCustomerUpdated }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: column.id,
     data: {
@@ -77,7 +78,8 @@ export default function KanbanColumnComponent({ column, customers, canMoveToStat
                 <CustomerCard 
                   key={customer.id} 
                   customer={customer}
-                  canMoveToStatus={canMoveToStatus}
+                  userRole={userRole}
+                  onCustomerUpdated={onCustomerUpdated}
                 />
               ))
             )}

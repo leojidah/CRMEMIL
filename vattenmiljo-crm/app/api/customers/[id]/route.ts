@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from 'next/server'
-import { authOptions } from '@/lib/auth'
-import { supabaseAdmin } from '@/lib/supabase'
-import { CustomerFormData } from '@/lib/types'
+import { getCurrentUser } from '@/lib/auth'
+import { supabaseAdmin } from '@/lib/supabase-server'
+import { CustomerFormData, CustomerStatus } from '@/lib/types'
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await auth(authOptions)
-    if (!session) {
+    const user = await getCurrentUser()
+    
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -38,13 +38,70 @@ export async function GET(
   }
 }
 
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const user = await getCurrentUser()
+    
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const body: { status?: CustomerStatus; [key: string]: any } = await request.json()
+    
+    if (!body.status) {
+      return NextResponse.json({ error: 'Status is required' }, { status: 400 })
+    }
+
+    // Get current customer data
+    const { data: currentCustomer, error: fetchError } = await supabaseAdmin
+      .from('customers')
+      .select('status')
+      .eq('id', params.id)
+      .single()
+
+    if (fetchError) {
+      console.error('Error fetching customer:', fetchError)
+      return NextResponse.json({ error: 'Customer not found' }, { status: 404 })
+    }
+
+    // Update customer status
+    const { data: customer, error } = await supabaseAdmin
+      .from('customers')
+      .update({ 
+        status: body.status,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', params.id)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Error updating customer status:', error)
+      return NextResponse.json({ error: 'Failed to update customer status' }, { status: 500 })
+    }
+
+    return NextResponse.json({ 
+      success: true, 
+      customer,
+      message: `Status updated from ${currentCustomer.status} to ${body.status}`
+    })
+  } catch (error) {
+    console.error('API Error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await auth(authOptions)
-    if (!session) {
+    const user = await getCurrentUser()
+    
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -59,6 +116,15 @@ export async function PUT(
     if (body.status !== undefined) updates.status = body.status
     if (body.priority !== undefined) updates.priority = body.priority
     if (body.assignedTo !== undefined) updates.assigned_to = body.assignedTo
+    if (body.leadSource !== undefined) updates.lead_source = body.leadSource
+    if (body.lastContactDate !== undefined) updates.last_contact_date = body.lastContactDate
+    if (body.nextFollowupDate !== undefined) updates.next_followup_date = body.nextFollowupDate
+    if (body.saleAmount !== undefined) updates.sale_amount = body.saleAmount
+    if (body.saleDate !== undefined) updates.sale_date = body.saleDate
+    if (body.needsAnalysis !== undefined) updates.needs_analysis = body.needsAnalysis
+    
+    // Always update the updated_at timestamp
+    updates.updated_at = new Date().toISOString()
 
     const { data: customer, error } = await supabaseAdmin
       .from('customers')
@@ -81,8 +147,8 @@ export async function PUT(
           type: 'status_change',
           title: 'Status updated',
           description: `Status changed to ${body.status}`,
-          performed_by: session.user.name,
-          performed_by_id: session.user.id
+          performed_by: user.name || user.email || 'Unknown User',
+          performed_by_id: user.id
         })
     }
 
@@ -98,13 +164,14 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await auth(authOptions)
-    if (!session) {
+    const user = await getCurrentUser()
+    
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // Check permissions - only internal users can delete customers
-    if (session.user.role !== 'internal') {
+    if (user.role !== 'internal' && user.role !== 'admin') {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
 
@@ -129,8 +196,8 @@ export async function DELETE(
         type: 'custom',
         title: 'Customer archived',
         description: 'Customer was archived',
-        performed_by: session.user.name,
-        performed_by_id: session.user.id
+        performed_by: user.name || user.email || 'Unknown User',
+        performed_by_id: user.id
       })
 
     return NextResponse.json({ message: 'Customer archived successfully' })

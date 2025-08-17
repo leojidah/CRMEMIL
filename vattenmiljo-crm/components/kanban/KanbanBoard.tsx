@@ -2,336 +2,440 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
-// import { arrayMove } from '@dnd-kit/sortable' // Not currently used
 import { Customer, CustomerStatus, UserRole, KanbanColumn } from '@/lib/types'
-// Removed NextAuth session import
 import KanbanColumnComponent from './KanbanColumn'
 import CustomerCard from './CustomerCard'
+import { useSupabaseAuth } from '@/hooks/useSupabaseAuth'
 
-interface KanbanBoardProps {
-  session: {
-    user: {
-      id: string
-      email: string
-      name: string
-      role: string
-      isActive: boolean
-    }
-  }
+interface UserProfile {
+  id: string
+  email: string
+  name: string
+  role: 'SALESPERSON' | 'INHOUSE' | 'INSTALLER' | 'ADMIN'
+  created_at: string
+  updated_at: string
 }
 
+interface KanbanBoardProps {
+  userProfile: UserProfile
+}
+
+// Definiera kolumner baserat på din specifikation
 const KANBAN_COLUMNS: KanbanColumn[] = [
+  // Säljare-kolumner
   {
     id: 'not_handled',
-    title: 'Ej hanterad',
+    title: 'Inte hanterat',
     description: 'Nya leads som behöver kontakt',
     color: 'bg-red-50 border-red-200',
     order: 1,
-    visibleToRoles: ['salesperson', 'internal', 'admin']
-  },
-  {
-    id: 'no_answer',
-    title: 'Inget svar',
-    description: 'Kunder som inte svarat',
-    color: 'bg-orange-50 border-orange-200',
-    order: 2,
-    visibleToRoles: ['salesperson', 'internal', 'admin']
-  },
-  {
-    id: 'call_again',
-    title: 'Ring igen',
-    description: 'Schemalagd uppföljning',
-    color: 'bg-yellow-50 border-yellow-200',
-    order: 3,
-    visibleToRoles: ['salesperson', 'internal', 'admin']
+    visibleToRoles: ['salesperson', 'admin']
   },
   {
     id: 'meeting_booked',
     title: 'Möte bokat',
     description: 'Möte schemalagt med kund',
     color: 'bg-blue-50 border-blue-200',
-    order: 4,
-    visibleToRoles: ['salesperson', 'internal', 'admin']
+    order: 2,
+    visibleToRoles: ['salesperson', 'admin']
   },
   {
     id: 'quotation_stage',
-    title: 'Offert',
-    description: 'Offert skickad eller under framtagning',
-    color: 'bg-indigo-50 border-indigo-200',
-    order: 5,
-    visibleToRoles: ['salesperson', 'internal', 'admin']
+    title: 'Förslag skickat',
+    description: 'Offert/förslag sänt till kund',
+    color: 'bg-yellow-50 border-yellow-200',
+    order: 3,
+    visibleToRoles: ['salesperson', 'admin']
   },
   {
     id: 'extended_water_test',
-    title: 'Utökad vattenanalys',
-    description: 'Kund genomför vattentest',
-    color: 'bg-cyan-50 border-cyan-200',
-    order: 6,
-    visibleToRoles: ['salesperson', 'internal', 'admin']
+    title: 'Utökat vattenprov',
+    description: 'Vattenprov pågår',
+    color: 'bg-purple-50 border-purple-200',
+    order: 4,
+    visibleToRoles: ['salesperson', 'admin']
   },
+  // In-house kolumner
   {
     id: 'sold',
-    title: 'Såld',
-    description: 'Kund har köpt, väntar på bearbetning',
+    title: 'Redo att faktureras',
+    description: 'Kund såld, behöver faktureras',
     color: 'bg-green-50 border-green-200',
-    order: 7,
-    visibleToRoles: ['salesperson', 'internal', 'admin']
+    order: 5,
+    visibleToRoles: ['internal', 'admin']
   },
+  // Montör kolumner
   {
     id: 'ready_for_installation',
-    title: 'Redo för installation',
-    description: 'Klar för montering',
-    color: 'bg-emerald-50 border-emerald-200',
-    order: 8,
-    visibleToRoles: ['internal', 'installer', 'admin']
-  },
-  {
-    id: 'installation_complete',
-    title: 'Installation klar',
-    description: 'Installation genomförd',
-    color: 'bg-teal-50 border-teal-200',
-    order: 9,
+    title: 'Redo att installeras',
+    description: 'Klar för installation',
+    color: 'bg-indigo-50 border-indigo-200',
+    order: 6,
     visibleToRoles: ['installer', 'internal', 'admin']
   },
   {
-    id: 'not_interested',
-    title: 'Ej intresserad',
-    description: 'Kunder som tackat nej',
+    id: 'installation_complete',
+    title: 'Klar',
+    description: 'Installation genomförd',
     color: 'bg-gray-50 border-gray-200',
-    order: 10,
-    visibleToRoles: ['salesperson', 'internal', 'admin']
-  },
-  {
-    id: 'archived',
-    title: 'Arkiverad',
-    description: 'Avslutade ärenden',
-    color: 'bg-slate-50 border-slate-200',
-    order: 11,
-    visibleToRoles: ['internal', 'admin']
+    order: 7,
+    visibleToRoles: ['installer', 'internal', 'admin']
   }
 ]
 
-export default function KanbanBoard({ session }: KanbanBoardProps) {
+export default function KanbanBoard({ userProfile }: KanbanBoardProps) {
   const [customers, setCustomers] = useState<Customer[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [draggedCustomer, setDraggedCustomer] = useState<Customer | null>(null)
-  const [searchTerm, setSearchTerm] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [activeId, setActiveId] = useState<string | null>(null)
+  const [isUpdating, setIsUpdating] = useState(false)
+  const [isCreating, setIsCreating] = useState(false)
+  
+  // Get access token for Authorization header approach
+  const { accessToken, loading: authLoading } = useSupabaseAuth()
 
-  const currentUserRole = session.user.role as UserRole
-
-  // Filter columns based on user role
-  const visibleColumns = useMemo(() => {
-    return KANBAN_COLUMNS
-      .filter(column => 
-        column.visibleToRoles.includes(currentUserRole) ||
-        (currentUserRole === 'admin') // Admin can see all columns
-      )
-      .sort((a, b) => a.order - b.order)
-  }, [currentUserRole])
-
-  // Configure drag sensors
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8, // Minimum distance before drag starts
+        distance: 8,
       },
     })
   )
 
-  // Fetch customers from API
+  // Konvertera användarroll till vårt format
+  const userRole = useMemo(() => {
+    switch (userProfile.role) {
+      case 'SALESPERSON': return 'salesperson'
+      case 'INHOUSE': return 'internal'
+      case 'INSTALLER': return 'installer'
+      case 'ADMIN': return 'admin'
+      default: return 'salesperson'
+    }
+  }, [userProfile.role])
+
+  // DEBUG: Auth state logging
+  useEffect(() => {
+    console.log('🔍 DEBUG KanbanBoard: Component mounted/updated')
+    console.log('👤 DEBUG KanbanBoard: UserProfile:', userProfile)
+    console.log('🎭 DEBUG KanbanBoard: UserRole (converted):', userRole)
+    console.log('🍪 DEBUG KanbanBoard: Document cookies:', document.cookie)
+    
+    // Check if we have Supabase auth state
+    const supabaseAuth = localStorage.getItem('sb-wyxqyqlnzkgbigsfglou-auth-token')
+    console.log('🔐 DEBUG KanbanBoard: Supabase auth token in localStorage:', supabaseAuth ? 'Present' : 'Missing')
+    
+    if (supabaseAuth) {
+      try {
+        const parsed = JSON.parse(supabaseAuth)
+        console.log('🔑 DEBUG KanbanBoard: Auth token details:', {
+          hasAccessToken: !!parsed.access_token,
+          hasRefreshToken: !!parsed.refresh_token,
+          expiresAt: parsed.expires_at,
+          userEmail: parsed.user?.email
+        })
+      } catch (e) {
+        console.log('❌ DEBUG KanbanBoard: Failed to parse auth token:', e)
+      }
+    }
+  }, [userProfile, userRole])
+
+  // Filtrera kolumner baserat på användarroll
+  const visibleColumns = useMemo(() => {
+    return KANBAN_COLUMNS.filter(column => 
+      column.visibleToRoles.includes(userRole as UserRole)
+    ).sort((a, b) => a.order - b.order)
+  }, [userRole])
+
+  // Reusable function to build authenticated headers
+  const buildAuthHeaders = () => {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    }
+    
+    // Add Authorization header if we have an access token
+    if (accessToken) {
+      headers['Authorization'] = `Bearer ${accessToken}`
+    }
+    
+    return headers
+  }
+
   const fetchCustomers = async () => {
     try {
       setLoading(true)
-      const params = new URLSearchParams()
-      if (searchTerm) params.append('search', searchTerm)
-
-      const response = await fetch(`/api/customers?${params.toString()}`)
-      const data = await response.json()
-
-      if (response.ok) {
-        setCustomers(data.customers || [])
-      } else {
-        setError(data.error || 'Failed to fetch customers')
+      console.log('🔄 KanbanBoard: Fetching customers...')
+      console.log('🔑 KanbanBoard: Access token available:', accessToken ? 'Yes' : 'No')
+      
+      const response = await fetch('/api/customers', {
+        credentials: 'include', // Keep cookies as fallback
+        headers: buildAuthHeaders(),
+      })
+      
+      console.log('📊 KanbanBoard: API response status:', response.status)
+      
+      if (!response.ok) {
+        let errorData = {}
+        let rawResponse = ''
+        
+        try {
+          rawResponse = await response.text()
+          console.log('📄 KanbanBoard: Raw error response:', rawResponse)
+          
+          if (rawResponse) {
+            errorData = JSON.parse(rawResponse)
+          }
+        } catch (parseError) {
+          console.error('❌ KanbanBoard: Failed to parse error response:', parseError)
+          console.log('📄 KanbanBoard: Raw response was:', rawResponse)
+          errorData = { error: `HTTP ${response.status} - Invalid JSON response` }
+        }
+        
+        console.error('❌ KanbanBoard: API error:', errorData)
+        
+        // Build comprehensive error message
+        let errorMessage = 'Failed to fetch customers'
+        if (errorData.error) {
+          errorMessage = errorData.error
+        } else if (errorData.message) {
+          errorMessage = errorData.message
+        } else if (rawResponse) {
+          errorMessage = `Server error: ${rawResponse.substring(0, 100)}`
+        } else {
+          errorMessage = `HTTP ${response.status} error`
+        }
+        
+        throw new Error(errorMessage)
       }
-    } catch (error) {
-      setError('Failed to fetch customers')
-      console.error('Error fetching customers:', error)
+      
+      const data = await response.json()
+      console.log('✅ KanbanBoard: Successfully received data:', {
+        customersCount: data.customers?.length || 0,
+        hasCustomers: Array.isArray(data.customers)
+      })
+      
+      setCustomers(data.customers || [])
+      setError(null)
+    } catch (err) {
+      console.error('💥 KanbanBoard: Error fetching customers:', err)
+      
+      const errorMessage = err instanceof Error ? err.message : 'Kunde inte ladda kunder'
+      setError(errorMessage)
+      
+      // Auto-clear error after 10 seconds for fetch errors
+      setTimeout(() => setError(null), 10000)
     } finally {
       setLoading(false)
     }
   }
 
-  // Update customer status
-  const updateCustomerStatus = async (customerId: string, newStatus: CustomerStatus) => {
-    try {
-      const response = await fetch(`/api/customers/${customerId}/move`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          status: newStatus,
-          movedBy: session.user.id,
-          method: 'kanban_drag_drop'
-        })
-      })
-
-      const data = await response.json()
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to update status')
-      }
-
-      return data.customer
-    } catch (error) {
-      console.error('Error updating customer status:', error)
-      throw error
+  // Only fetch customers when auth is ready and we have access token
+  useEffect(() => {
+    if (!authLoading && accessToken) {
+      console.log('🚀 KanbanBoard: Auth ready, fetching customers...')
+      fetchCustomers()
+    } else if (!authLoading && !accessToken) {
+      console.log('❌ KanbanBoard: No access token available, cannot fetch customers')
+      setError('Autentisering krävs för att ladda kunder')
+      setLoading(false)
     }
-  }
+  }, [authLoading, accessToken])
 
-  // Get customers for a specific column
-  const getCustomersForColumn = (status: CustomerStatus) => {
-    let columnCustomers = customers.filter(customer => customer.status === status)
-    
-    // Apply role-based filtering
-    if (currentUserRole === 'salesperson') {
-      // Salespeople only see their own customers or unassigned ones
-      columnCustomers = columnCustomers.filter(customer => 
-        customer.assignedTo === session.user.id || !customer.assignedTo
-      )
-    } else if (currentUserRole === 'installer') {
-      // Installers only see customers ready for installation or completed
-      columnCustomers = columnCustomers.filter(customer =>
-        customer.status === 'ready_for_installation' || customer.status === 'installation_complete'
-      )
-    }
-
-    return columnCustomers
-  }
-
-  // Check if user can move customer to a specific status
-  const canMoveToStatus = (customer: Customer, newStatus: CustomerStatus): boolean => {
-    const currentStatus = customer.status
-
-    // Define valid transitions by role
-    const validTransitions: Record<UserRole, Record<CustomerStatus, CustomerStatus[]>> = {
-      salesperson: {
-        'not_handled': ['no_answer', 'call_again', 'not_interested', 'meeting_booked'],
-        'no_answer': ['call_again', 'not_interested', 'meeting_booked'],
-        'call_again': ['no_answer', 'not_interested', 'meeting_booked'],
-        'meeting_booked': ['quotation_stage', 'not_interested'],
-        'quotation_stage': ['extended_water_test', 'sold', 'not_interested'],
-        'extended_water_test': ['sold', 'not_interested'],
-        'sold': [], // Salespeople can't move from sold
-        'ready_for_installation': [],
-        'installation_complete': [],
-        'not_interested': ['call_again'], // Can reactivate
-        'archived': []
-      },
-      internal: {
-        'not_handled': ['no_answer', 'call_again', 'not_interested', 'meeting_booked'],
-        'no_answer': ['call_again', 'not_interested', 'meeting_booked'],
-        'call_again': ['no_answer', 'not_interested', 'meeting_booked'],
-        'meeting_booked': ['quotation_stage', 'not_interested'],
-        'quotation_stage': ['extended_water_test', 'sold', 'not_interested'],
-        'extended_water_test': ['sold', 'not_interested'],
-        'sold': ['ready_for_installation'],
-        'ready_for_installation': ['installation_complete'],
-        'installation_complete': ['archived'],
-        'not_interested': ['archived'],
-        'archived': []
-      },
-      installer: {
-        'not_handled': [],
-        'no_answer': [],
-        'call_again': [],
-        'meeting_booked': [],
-        'quotation_stage': [],
-        'extended_water_test': [],
-        'sold': [],
-        'ready_for_installation': ['installation_complete'],
-        'installation_complete': [],
-        'not_interested': [],
-        'archived': []
-      },
-      admin: {
-        // Admin can move between any statuses
-        'not_handled': ['no_answer', 'call_again', 'not_interested', 'meeting_booked', 'quotation_stage', 'extended_water_test', 'sold', 'ready_for_installation', 'installation_complete', 'archived'],
-        'no_answer': ['not_handled', 'call_again', 'not_interested', 'meeting_booked', 'quotation_stage', 'extended_water_test', 'sold', 'ready_for_installation', 'installation_complete', 'archived'],
-        'call_again': ['not_handled', 'no_answer', 'not_interested', 'meeting_booked', 'quotation_stage', 'extended_water_test', 'sold', 'ready_for_installation', 'installation_complete', 'archived'],
-        'meeting_booked': ['not_handled', 'no_answer', 'call_again', 'not_interested', 'quotation_stage', 'extended_water_test', 'sold', 'ready_for_installation', 'installation_complete', 'archived'],
-        'quotation_stage': ['not_handled', 'no_answer', 'call_again', 'meeting_booked', 'not_interested', 'extended_water_test', 'sold', 'ready_for_installation', 'installation_complete', 'archived'],
-        'extended_water_test': ['not_handled', 'no_answer', 'call_again', 'meeting_booked', 'quotation_stage', 'not_interested', 'sold', 'ready_for_installation', 'installation_complete', 'archived'],
-        'sold': ['not_handled', 'no_answer', 'call_again', 'meeting_booked', 'quotation_stage', 'extended_water_test', 'not_interested', 'ready_for_installation', 'installation_complete', 'archived'],
-        'ready_for_installation': ['not_handled', 'no_answer', 'call_again', 'meeting_booked', 'quotation_stage', 'extended_water_test', 'sold', 'not_interested', 'installation_complete', 'archived'],
-        'installation_complete': ['not_handled', 'no_answer', 'call_again', 'meeting_booked', 'quotation_stage', 'extended_water_test', 'sold', 'ready_for_installation', 'not_interested', 'archived'],
-        'not_interested': ['not_handled', 'no_answer', 'call_again', 'meeting_booked', 'quotation_stage', 'extended_water_test', 'sold', 'ready_for_installation', 'installation_complete', 'archived'],
-        'archived': ['not_handled', 'no_answer', 'call_again', 'meeting_booked', 'quotation_stage', 'extended_water_test', 'sold', 'ready_for_installation', 'installation_complete', 'not_interested']
-      }
-    }
-
-    const allowedTransitions = validTransitions[currentUserRole]?.[currentStatus] || []
-    return allowedTransitions.includes(newStatus)
-  }
-
-  // Handle drag start
   const handleDragStart = (event: DragStartEvent) => {
-    const customerId = event.active.id as string
-    const customer = customers.find(c => c.id === customerId)
-    setDraggedCustomer(customer || null)
+    setActiveId(event.active.id as string)
   }
 
-  // Handle drag end
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event
-    setDraggedCustomer(null)
+    setActiveId(null)
 
-    if (!over || active.id === over.id) return
-
-    const customerId = active.id as string
-    const newStatus = over.id as CustomerStatus
-    const customer = customers.find(c => c.id === customerId)
-
-    if (!customer) return
-
-    // Check if the move is allowed
-    if (!canMoveToStatus(customer, newStatus)) {
-      console.warn(`Move from ${customer.status} to ${newStatus} not allowed for role ${currentUserRole}`)
+    if (!over || active.id === over.id) {
       return
     }
 
-    // Optimistic update
+    const customerId = active.id as string
+    const newStatus = over.id as CustomerStatus
+
+    // Uppdatera lokalt först för bättre UX
     setCustomers(prev => 
-      prev.map(c => 
-        c.id === customerId 
-          ? { ...c, status: newStatus, updatedAt: new Date().toISOString() }
-          : c
+      prev.map(customer => 
+        customer.id === customerId 
+          ? { ...customer, status: newStatus }
+          : customer
       )
     )
 
     try {
-      await updateCustomerStatus(customerId, newStatus)
+      setIsUpdating(true)
+      setError(null) // Clear previous errors
+      console.log('🔄 KanbanBoard: Updating customer status...', { customerId, newStatus })
+      
+      const response = await fetch(`/api/customers/${customerId}`, {
+        method: 'PATCH',
+        credentials: 'include', // Add cookies for auth
+        headers: buildAuthHeaders(), // Use our reusable auth headers
+        body: JSON.stringify({ status: newStatus }),
+      })
+
+      console.log('📊 KanbanBoard: Status update response:', response.status)
+
+      if (!response.ok) {
+        let errorData = {}
+        let rawResponse = ''
+        
+        try {
+          rawResponse = await response.text()
+          console.log('📄 KanbanBoard: Raw error response:', rawResponse)
+          
+          if (rawResponse) {
+            errorData = JSON.parse(rawResponse)
+          }
+        } catch (parseError) {
+          console.error('❌ KanbanBoard: Failed to parse error response:', parseError)
+          console.log('📄 KanbanBoard: Raw response was:', rawResponse)
+          errorData = { error: `HTTP ${response.status} - Invalid JSON response` }
+        }
+        
+        console.error('❌ KanbanBoard: Status update failed:', errorData)
+        
+        // Build comprehensive error message
+        let errorMessage = 'Failed to update customer status'
+        if (errorData.error) {
+          errorMessage = errorData.error
+        } else if (errorData.message) {
+          errorMessage = errorData.message
+        } else if (rawResponse) {
+          errorMessage = `Server error: ${rawResponse.substring(0, 100)}`
+        } else {
+          errorMessage = `HTTP ${response.status} error`
+        }
+        
+        throw new Error(errorMessage)
+      }
+
+      const result = await response.json()
+      console.log('✅ KanbanBoard: Status updated successfully:', result)
+
+      // Refresh data from server to ensure consistency
+      await fetchCustomers()
     } catch (err) {
-      console.error('Error updating customer status:', err)
-      // Revert optimistic update on error
-      setCustomers(prev => 
-        prev.map(c => 
-          c.id === customerId 
-            ? { ...c, status: customer.status, updatedAt: customer.updatedAt }
-            : c
-        )
-      )
+      console.error('💥 KanbanBoard: Error updating customer status:', err)
+      // Revert local change on error
+      await fetchCustomers()
+      
+      const errorMessage = err instanceof Error ? err.message : 'Kunde inte uppdatera kundstatus'
+      setError(errorMessage)
+      
+      // Auto-clear error after 5 seconds
+      setTimeout(() => setError(null), 5000)
+    } finally {
+      setIsUpdating(false)
     }
   }
 
-  // Load customers on mount and when search changes
-  useEffect(() => {
-    fetchCustomers()
-  }, [searchTerm])
+  const handleCreateCustomer = async () => {
+    try {
+      setIsCreating(true)
+      setError(null) // Clear previous errors
+      
+      // Simple demo customer - in production this would be a form modal
+      const newCustomer = {
+        name: `Demo Kund ${new Date().getTime()}`,
+        email: `demo${Date.now()}@example.com`,
+        phone: '070-123-4567',
+        address: 'Demo Address 123',
+        status: 'not_handled',
+        priority: 'medium',
+        notes: 'Skapad via Kanban board'
+      }
+
+      console.log('🔄 KanbanBoard: Creating new customer...', newCustomer)
+
+      const response = await fetch('/api/customers', {
+        method: 'POST',
+        credentials: 'include',
+        headers: buildAuthHeaders(),
+        body: JSON.stringify(newCustomer),
+      })
+
+      console.log('📊 KanbanBoard: Create customer response:', response.status)
+
+      if (!response.ok) {
+        let errorData = {}
+        let rawResponse = ''
+        
+        try {
+          rawResponse = await response.text()
+          console.log('📄 KanbanBoard: Raw error response:', rawResponse)
+          
+          if (rawResponse) {
+            errorData = JSON.parse(rawResponse)
+          }
+        } catch (parseError) {
+          console.error('❌ KanbanBoard: Failed to parse error response:', parseError)
+          console.log('📄 KanbanBoard: Raw response was:', rawResponse)
+          errorData = { error: `HTTP ${response.status} - Invalid JSON response` }
+        }
+        
+        console.error('❌ KanbanBoard: Create customer failed:', errorData)
+        
+        // Build comprehensive error message
+        let errorMessage = 'Failed to create customer'
+        if (errorData.error) {
+          errorMessage = errorData.error
+        } else if (errorData.message) {
+          errorMessage = errorData.message
+        } else if (rawResponse) {
+          errorMessage = `Server error: ${rawResponse.substring(0, 100)}`
+        } else {
+          errorMessage = `HTTP ${response.status} error`
+        }
+        
+        throw new Error(errorMessage)
+      }
+
+      const result = await response.json()
+      console.log('✅ KanbanBoard: Customer created successfully:', result)
+
+      // Refresh data to show new customer
+      await fetchCustomers()
+      
+      // Show success message briefly
+      alert('Kund skapad framgångsrikt!')
+      
+    } catch (err) {
+      console.error('💥 KanbanBoard: Error creating customer:', err)
+      
+      const errorMessage = err instanceof Error ? err.message : 'Kunde inte skapa ny kund'
+      setError(errorMessage)
+      
+      // Auto-clear error after 5 seconds
+      setTimeout(() => setError(null), 5000)
+    } finally {
+      setIsCreating(false)
+    }
+  }
+
+  const getCustomersForStatus = (status: CustomerStatus) => {
+    return customers.filter(customer => customer.status === status)
+  }
+
+  const activeCustomer = activeId ? customers.find(c => c.id === activeId) : null
+
+  const handleCustomerUpdated = (updatedCustomer: Customer) => {
+    setCustomers(prev => 
+      prev.map(customer => 
+        customer.id === updatedCustomer.id ? updatedCustomer : customer
+      )
+    )
+  }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-96">
-        <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-        <span className="ml-3 text-gray-600">Laddar Kanban board...</span>
+      <div className="flex items-center justify-center h-64">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+          <p className="text-gray-600">Laddar Kanban-tavla...</p>
+        </div>
       </div>
     )
   }
@@ -339,69 +443,103 @@ export default function KanbanBoard({ session }: KanbanBoardProps) {
   if (error) {
     return (
       <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-        <p className="text-red-700">{error}</p>
-        <button 
-          onClick={fetchCustomers}
-          className="mt-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-        >
-          Försök igen
-        </button>
+        <div className="flex items-center">
+          <div className="text-red-400 mr-3">⚠️</div>
+          <div>
+            <p className="text-red-800 font-medium">Fel vid laddning</p>
+            <p className="text-red-700 text-sm">{error}</p>
+            <button 
+              onClick={fetchCustomers}
+              className="mt-2 text-red-600 hover:text-red-800 text-sm underline"
+            >
+              Försök igen
+            </button>
+          </div>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Search and controls */}
-      <div className="flex items-center gap-4 mb-6 p-4 bg-white rounded-lg shadow-sm border">
-        <div className="flex-1">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Sök kunder..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
-          </div>
-        </div>
+    <div className="w-full">
+      {/* Header med statistik */}
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          Kanban-tavla för {userProfile.name}
+        </h2>
         <div className="text-sm text-gray-600">
-          Roll: <span className="font-semibold">{currentUserRole}</span>
+          Totalt {customers.length} kunder • 
+          {visibleColumns.length} aktiva kolumner för din roll
         </div>
       </div>
 
-      {/* Kanban columns */}
-      <div className="flex-1 overflow-x-auto">
-        <div className="flex gap-6 p-4 min-w-max">
-          <DndContext
-            sensors={sensors}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-          >
-            {visibleColumns.map(column => (
-              <KanbanColumnComponent
-                key={column.id}
-                column={column}
-                customers={getCustomersForColumn(column.id)}
-                canMoveToStatus={(customer, status) => canMoveToStatus(customer, status)}
-              />
-            ))}
-            
-            <DragOverlay>
-              {draggedCustomer && (
-                <div className="transform rotate-3">
-                  <CustomerCard customer={draggedCustomer} isDragging />
-                </div>
-              )}
-            </DragOverlay>
-          </DndContext>
+      <DndContext
+        sensors={sensors}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="flex space-x-6 overflow-x-auto pb-4">
+          {visibleColumns.map((column) => (
+            <KanbanColumnComponent
+              key={column.id}
+              column={column}
+              customers={getCustomersForStatus(column.id)}
+              userRole={userRole as UserRole}
+              onCustomerUpdated={handleCustomerUpdated}
+            />
+          ))}
         </div>
+
+        <DragOverlay>
+          {activeCustomer ? (
+            <div className="rotate-2 opacity-90">
+              <CustomerCard 
+                customer={activeCustomer} 
+                isDragging={true}
+                userRole={userRole as UserRole}
+              />
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
+
+      {/* Refresh-knapp */}
+      <div className="mt-6 flex justify-center space-x-4">
+        <button
+          onClick={fetchCustomers}
+          disabled={loading || isUpdating}
+          className={`px-4 py-2 text-white rounded-lg transition-colors ${
+            loading || isUpdating
+              ? 'bg-gray-400 cursor-not-allowed'
+              : 'bg-blue-600 hover:bg-blue-700'
+          }`}
+        >
+          {loading ? '⏳ Laddar...' : '🔄 Uppdatera data'}
+        </button>
+        <button
+          onClick={handleCreateCustomer}
+          disabled={!accessToken || isCreating || loading}
+          className={`px-4 py-2 text-white rounded-lg transition-colors ${
+            !accessToken || isCreating || loading
+              ? 'bg-gray-400 cursor-not-allowed'
+              : 'bg-green-600 hover:bg-green-700'
+          }`}
+        >
+          {isCreating ? '⏳ Skapar...' : '➕ Lägg till kund'}
+        </button>
       </div>
+      
+      {/* Enhanced loading state indicator */}
+      {(isUpdating || isCreating) && (
+        <div className="mt-4 flex justify-center">
+          <div className="flex items-center space-x-2 text-blue-600">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+            <span className="text-sm">
+              {isUpdating ? 'Uppdaterar kundstatus...' : 'Skapar ny kund...'}
+            </span>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

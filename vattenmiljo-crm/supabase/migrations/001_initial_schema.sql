@@ -261,9 +261,9 @@ create policy "Users can view customer activities" on customer_activities
 -- INITIAL DATA
 -- ============================================================================
 
--- Insert default admin user (password: 'admin123!' - should be changed immediately)
-insert into users (email, password_hash, name, role, is_active) values
-    ('admin@vattenmiljo.se', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/Lewis42qNTpw6f8.u', 'Administrator', 'internal', true);
+-- NOTE: Admin user should be created using the create-admin.js script
+-- This ensures secure password generation and proper environment variable usage
+-- DO NOT insert default admin credentials in migration files
 
 -- Insert some demo users
 insert into users (email, password_hash, name, role, is_active) values

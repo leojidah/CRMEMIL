@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
-import { auth } from '@/lib/auth'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
 import { CustomerStatus } from '@/lib/types'
 
 interface MoveCustomerRequest {
@@ -14,7 +14,9 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await auth()
+    const supabase = createRouteHandlerClient({ cookies: () => cookies() })
+    const { data: { session } } = await supabase.auth.getSession()
+    
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -49,7 +51,7 @@ export async function PATCH(
     }
 
     // Role-based permission checks
-    const userRole = session.user.role
+    const userRole = session.user.user_metadata?.role || 'salesperson'
     const currentStatus = customer.status
 
     // Define valid transitions by role
@@ -153,7 +155,7 @@ export async function PATCH(
         type: 'status_change',
         title: 'Status updated via Kanban',
         description: `Status changed from ${currentStatus} to ${status}`,
-        performed_by: session.user.name || 'Unknown User',
+        performed_by: session.user.user_metadata?.name || session.user.email || 'Unknown User',
         performed_by_id: session.user.id,
         metadata: {
           previous_status: currentStatus,

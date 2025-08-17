@@ -1,11 +1,13 @@
 import "next-auth"
-import { UserRole } from "@/lib/types"
+import { UserProfile } from "@/lib/supabase"
 
 declare module "next-auth" {
   interface User {
-    role: UserRole
+    id: string
+    email: string
+    name: string
+    role: UserProfile['role']
     isActive: boolean
-    avatar?: string
   }
 
   interface Session {
@@ -13,16 +15,16 @@ declare module "next-auth" {
       id: string
       email: string
       name: string
-      role: UserRole
+      role: UserProfile['role']
       isActive: boolean
-      avatar?: string
     }
   }
 }
 
 declare module "next-auth/jwt" {
   interface JWT {
-    role: UserRole
+    id: string
+    role: UserProfile['role']
     isActive: boolean
   }
 }

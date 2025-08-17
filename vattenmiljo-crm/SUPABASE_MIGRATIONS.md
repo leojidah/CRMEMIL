@@ -59,4 +59,4 @@ After migrations are complete, run:
 node scripts/create-admin.js
 ```
 
-This will create the admin user account with email: leojidah@hotmail.com
+This will create the admin user account (credentials will be generated securely)

@@ -1,18 +1,21 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Customer, CustomerStatus } from '@/lib/types'
+import { Customer, UserRole } from '@/lib/types'
 import { Phone, Mail, MapPin, Calendar, Clock, Euro, User, CheckCircle2, TrendingUp } from 'lucide-react'
+import CustomerDetailModal from '@/components/customer/CustomerDetailModal'
 
 interface CustomerCardProps {
   customer: Customer
   isDragging?: boolean
-  canMoveToStatus?: (customer: Customer, status: CustomerStatus) => boolean
+  userRole: UserRole
+  onCustomerUpdated?: (customer: Customer) => void
 }
 
-export default function CustomerCard({ customer, isDragging = false }: CustomerCardProps) {
+export default function CustomerCard({ customer, isDragging = false, userRole, onCustomerUpdated }: CustomerCardProps) {
+  const [showModal, setShowModal] = useState(false)
   const {
     attributes,
     listeners,
@@ -71,16 +74,56 @@ export default function CustomerCard({ customer, isDragging = false }: CustomerC
 
   const priorityConfig = PRIORITY_CONFIG[customer.priority]
 
+  // Special action buttons based on user role and status
+  const getActionButton = () => {
+    if (userRole === 'salesperson' && 
+        (customer.status === 'quotation_stage' || customer.status === 'extended_water_test')) {
+      return (
+        <button 
+          className="w-full mt-2 px-3 py-1 bg-green-600 text-white text-xs font-medium rounded hover:bg-green-700 transition-colors"
+          onClick={(e) => {
+            e.stopPropagation()
+            // TODO: Implement "mark as sold" functionality
+            console.log('Mark as sold:', customer.id)
+          }}
+        >
+          🎉 Såld!
+        </button>
+      )
+    }
+    return null
+  }
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Don't open modal if clicking on a button or other interactive element
+    if ((e.target as HTMLElement).closest('button')) {
+      return
+    }
+    
+    // Stop propagation to prevent drag events
+    e.stopPropagation()
+    setShowModal(true)
+  }
+
+  const handleCustomerUpdated = (updatedCustomer: Customer) => {
+    if (onCustomerUpdated) {
+      onCustomerUpdated(updatedCustomer)
+    }
+    setShowModal(false)
+  }
+
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...listeners}
-      className={`bg-white rounded-lg border border-gray-200 p-4 shadow-sm hover:shadow-md transition-all cursor-grab active:cursor-grabbing ${
-        (isDragging || isSortableDragging) ? 'shadow-lg ring-2 ring-blue-500 ring-opacity-50 transform scale-105' : ''
-      }`}
-    >
+    <>
+      <div
+        ref={setNodeRef}
+        style={style}
+        {...attributes}
+        {...listeners}
+        onClick={handleCardClick}
+        className={`bg-white rounded-lg border border-gray-200 p-4 shadow-sm hover:shadow-md transition-all cursor-grab active:cursor-grabbing hover:cursor-pointer ${
+          (isDragging || isSortableDragging) ? 'shadow-lg ring-2 ring-blue-500 ring-opacity-50 transform scale-105' : ''
+        }`}
+      >
       {/* Header with name and priority */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1 min-w-0">
@@ -181,6 +224,9 @@ export default function CustomerCard({ customer, isDragging = false }: CustomerC
         </div>
       )}
 
+      {/* Action button for specific roles */}
+      {getActionButton()}
+
       {/* Footer with relative date */}
       <div className="flex items-center justify-between pt-3 border-t border-gray-100">
         <span className="text-xs text-gray-400">
@@ -200,6 +246,15 @@ export default function CustomerCard({ customer, isDragging = false }: CustomerC
           )}
         </div>
       </div>
-    </div>
+      </div>
+      
+      {/* Customer Detail Modal */}
+      <CustomerDetailModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        customerId={customer.id}
+        onCustomerUpdated={handleCustomerUpdated}
+      />
+    </>
   )
 }

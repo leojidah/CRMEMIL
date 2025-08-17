@@ -61,12 +61,13 @@ export interface CustomerNote {
 
 export interface CustomerFile {
   id: string;
-  filename: string;
+  fileName: string;
   originalName: string;
   mimeType: string;
   size: number;
-  url: string;
-  category: 'contract' | 'photo' | 'document' | 'other';
+  url?: string;
+  storagePath: string;
+  category?: 'contract' | 'photo' | 'document' | 'other';
   uploadedBy: string;
   uploadedById: string;
   uploadedAt: string;
@@ -75,7 +76,9 @@ export interface CustomerFile {
 export type ActivityType = 
   | 'status_change'
   | 'note_added'
-  | 'file_uploaded'
+  | 'file_upload'
+  | 'file_download'
+  | 'file_delete'
   | 'meeting_scheduled'
   | 'call_made'
   | 'email_sent'
@@ -225,6 +228,12 @@ export interface CustomerFormData {
   priority: CustomerPriority;
   assignedTo?: string;
   notes?: string;
+  leadSource?: string;
+  lastContactDate?: string;
+  nextFollowupDate?: string;
+  saleAmount?: number;
+  saleDate?: string;
+  needsAnalysis?: NeedsAnalysis;
 }
 
 export interface UserFormData {

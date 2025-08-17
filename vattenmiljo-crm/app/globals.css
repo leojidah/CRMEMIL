@@ -66,6 +66,15 @@
   }
 }
 
+@keyframes pulse-glow {
+  0%, 100% { 
+    box-shadow: 0 0 5px rgba(59, 130, 246, 0.5);
+  }
+  50% { 
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.8);
+  }
+}
+
 /* Animation Classes */
 .animate-fade-in {
   animation: fadeIn 0.5s ease-in-out;
@@ -77,6 +86,90 @@
 
 .kpi-card-enter {
   animation: scaleIn 0.3s ease-out;
+}
+
+.animation-delay-150 {
+  animation-delay: 150ms;
+}
+
+.animation-delay-300 {
+  animation-delay: 300ms;
+}
+
+/* Development Mode Styles */
+#dev-tools {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#dev-tools:hover {
+  transform: translateY(-2px);
+}
+
+/* Loading States */
+.loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+.loading-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* ============================================================================
+   RESPONSIVE DEVELOPMENT TOOLS
+   ============================================================================ */
+
+/* Mobile adjustments for dev tools */
+@media (max-width: 640px) {
+  #dev-tools {
+    bottom: 8px;
+    right: 8px;
+    left: 8px;
+    width: auto;
+  }
+  
+  #dev-tools > div {
+    max-width: none;
+  }
+  
+  /* Smaller loading spinners on mobile */
+  .loading-spinner {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+}
+
+/* Tablet adjustments */
+@media (max-width: 768px) and (min-width: 641px) {
+  #dev-tools {
+    bottom: 12px;
+    right: 12px;
+  }
+}
+
+/* High DPI screens */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .loading-spinner {
+    border-width: 2px;
+  }
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .loading-spinner,
+  .animate-spin,
+  .animate-pulse,
+  .animation-delay-150,
+  .animation-delay-300 {
+    animation: none;
+  }
+  
+  #dev-tools {
+    transition: none;
+  }
+  
+  #dev-tools:hover {
+    transform: none;
+  }
 }
 
 /* ============================================================================

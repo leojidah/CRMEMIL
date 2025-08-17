@@ -100,7 +100,7 @@ async function testAuthenticationFlow() {
     console.log(`   1. Run database migrations in Supabase (see SUPABASE_MIGRATIONS.md)`);
     console.log(`   2. Create admin user: node scripts/create-admin.js`);
     console.log(`   3. Test login at: http://localhost:3002/auth/signin`);
-    console.log(`   4. Admin credentials: leojidah@hotmail.com / admin123`);
+    console.log('   4. Admin credentials: Use environment variables or run create-admin script');
   } else {
     console.log(`\n⚠️  Some tests failed. Check the implementation.`);
   }

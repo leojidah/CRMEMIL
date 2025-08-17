@@ -66,14 +66,18 @@ The application will be available at `http://localhost:3000`
 
 ## 🔐 Default Login Credentials
 
-The system creates several demo users:
+The system creates demo users with secure authentication:
 
-- **Admin**: `admin@vattenmiljo.se` / `admin123!`
-- **Salesperson**: `demo.saljare@vattenmiljo.se` / `admin123!`
-- **Internal**: `demo.intern@vattenmiljo.se` / `admin123!`
-- **Installer**: `demo.montor@vattenmiljo.se` / `admin123!`
+- **Admin**: Use environment variables (ADMIN_EMAIL/ADMIN_PASSWORD) or run `node scripts/create-admin.js`
+- **Demo Users**: Will be created by setup script with secure random passwords
+- **Security**: All passwords are auto-generated and must be changed after first login
+- **Production**: NEVER use demo credentials in production environment
 
-**⚠️ Important**: Change these passwords immediately in production!
+**🔐 Security Requirements**:
+1. Set environment variables for production deployment
+2. Change all default passwords immediately after first login  
+3. Use strong passwords (minimum 12 characters)
+4. Enable two-factor authentication in production
 
 ## 👥 User Roles
 

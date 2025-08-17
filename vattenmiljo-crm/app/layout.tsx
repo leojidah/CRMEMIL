@@ -5,7 +5,8 @@
 import React from 'react';
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
-import SupabaseAuthProvider from '@/components/providers/SupabaseAuthProvider';
+import AuthProvider from '@/components/providers/AuthProvider';
+import DebugInfo from '@/components/DebugInfo';
 import './globals.css';
 
 // ============================================================================
@@ -200,7 +201,7 @@ export default function RootLayout({ children }: RootLayoutProps): JSX.Element {
         {/* Skip to main content for accessibility */}
         <a
           href="#main-content"
-          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 z-50 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 z-50 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-lg transform transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
         >
           Hoppa till huvudinnehåll
         </a>
@@ -210,19 +211,33 @@ export default function RootLayout({ children }: RootLayoutProps): JSX.Element {
           {/* Loading Overlay Container */}
           <div 
             id="loading-overlay" 
-            className="fixed inset-0 z-50 bg-white/80 backdrop-blur-sm hidden items-center justify-center"
+            className="fixed inset-0 z-50 bg-white/90 backdrop-blur-md hidden items-center justify-center"
           >
-            <div className="flex flex-col items-center space-y-4">
-              <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
-              <p className="text-gray-600 font-medium">Laddar...</p>
+            <div className="flex flex-col items-center space-y-6">
+              {/* Logo */}
+              <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-xl">
+                <span className="text-white font-bold text-2xl">V</span>
+              </div>
+              
+              {/* Loading Animation */}
+              <div className="relative">
+                <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+                <div className="absolute inset-0 w-12 h-12 border-4 border-transparent border-r-blue-400 rounded-full animate-spin animation-delay-150"></div>
+              </div>
+              
+              {/* Loading Text */}
+              <div className="text-center">
+                <p className="text-lg font-semibold text-gray-900 mb-1">Vattenmiljö CRM</p>
+                <p className="text-sm text-gray-600 animate-pulse">Laddar applikationen...</p>
+              </div>
             </div>
           </div>
 
           {/* Main Content */}
           <main id="main-content" className="relative z-0">
-            <SupabaseAuthProvider>
+            <AuthProvider>
               {children}
-            </SupabaseAuthProvider>
+            </AuthProvider>
           </main>
         </div>
 
@@ -273,9 +288,13 @@ export default function RootLayout({ children }: RootLayoutProps): JSX.Element {
 
         {/* Development Tools (only in development) */}
         {process.env.NODE_ENV === 'development' && (
-          <div id="dev-tools" className="fixed bottom-4 right-4 z-50">
-            <div className="bg-gray-900 text-white px-3 py-2 rounded-lg text-xs font-mono">
-              DEV
+          <div id="dev-tools" className="fixed top-4 right-4 z-40 max-w-xs">
+            <div className="space-y-0">
+              <div className="bg-gradient-to-r from-gray-900 to-gray-800 text-white px-3 py-1.5 rounded-t-lg text-xs font-mono font-medium border-b border-gray-700 flex items-center gap-2">
+                <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></div>
+                DEV
+              </div>
+              <DebugInfo />
             </div>
           </div>
         )}
