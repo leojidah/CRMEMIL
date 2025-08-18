@@ -4,8 +4,9 @@ import React, { useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { Customer, UserRole } from '@/lib/types'
-import { Phone, Mail, MapPin, Calendar, Clock, Euro, User, CheckCircle2, TrendingUp } from 'lucide-react'
+import { Phone, Mail, MapPin, Calendar, Clock, Euro, User, CheckCircle2, TrendingUp, MessageSquare } from 'lucide-react'
 import CustomerDetailModal from '@/components/customer/CustomerDetailModal'
+import NotesModal from '@/components/modals/NotesModal'
 
 interface CustomerCardProps {
   customer: Customer
@@ -16,6 +17,8 @@ interface CustomerCardProps {
 
 export default function CustomerCard({ customer, isDragging = false, userRole, onCustomerUpdated }: CustomerCardProps) {
   const [showModal, setShowModal] = useState(false)
+  const [showNotesModal, setShowNotesModal] = useState(false)
+  const [hasNotes, setHasNotes] = useState(false)
   const {
     attributes,
     listeners,
@@ -84,7 +87,6 @@ export default function CustomerCard({ customer, isDragging = false, userRole, o
           onClick={(e) => {
             e.stopPropagation()
             // TODO: Implement "mark as sold" functionality
-            console.log('Mark as sold:', customer.id)
           }}
         >
           🎉 Såld!
@@ -93,6 +95,24 @@ export default function CustomerCard({ customer, isDragging = false, userRole, o
     }
     return null
   }
+
+  // Check if customer has notes when component mounts
+  React.useEffect(() => {
+    const checkNotes = async () => {
+      try {
+        const response = await fetch(`/api/customers/${customer.id}/notes`, {
+          credentials: 'include',
+        })
+        if (response.ok) {
+          const data = await response.json()
+          setHasNotes(data.notes && data.notes.length > 0)
+        }
+      } catch (error) {
+        // Fail silently for notes check
+      }
+    }
+    checkNotes()
+  }, [customer.id])
 
   const handleCardClick = (e: React.MouseEvent) => {
     // Don't open modal if clicking on a button or other interactive element
@@ -103,6 +123,11 @@ export default function CustomerCard({ customer, isDragging = false, userRole, o
     // Stop propagation to prevent drag events
     e.stopPropagation()
     setShowModal(true)
+  }
+
+  const handleNotesClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setShowNotesModal(true)
   }
 
   const handleCustomerUpdated = (updatedCustomer: Customer) => {
@@ -124,7 +149,7 @@ export default function CustomerCard({ customer, isDragging = false, userRole, o
           (isDragging || isSortableDragging) ? 'shadow-lg ring-2 ring-blue-500 ring-opacity-50 transform scale-105' : ''
         }`}
       >
-      {/* Header with name and priority */}
+      {/* Header with name, priority and notes indicator */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-gray-900 text-sm leading-tight mb-1 truncate">
@@ -135,8 +160,23 @@ export default function CustomerCard({ customer, isDragging = false, userRole, o
               <div className={`w-2 h-2 rounded-full ${priorityConfig.dotColor}`} />
               {priorityConfig.label}
             </span>
+            {hasNotes && (
+              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                <MessageSquare className="w-3 h-3" />
+                Anteckningar
+              </span>
+            )}
           </div>
         </div>
+        
+        {/* Quick notes button */}
+        <button
+          onClick={handleNotesClick}
+          className="p-1 hover:bg-gray-100 rounded transition-colors"
+          title="Visa anteckningar"
+        >
+          <MessageSquare className={`w-4 h-4 ${hasNotes ? 'text-blue-600' : 'text-gray-400'}`} />
+        </button>
       </div>
 
       {/* Contact information */}
@@ -254,6 +294,14 @@ export default function CustomerCard({ customer, isDragging = false, userRole, o
         onClose={() => setShowModal(false)}
         customerId={customer.id}
         onCustomerUpdated={handleCustomerUpdated}
+      />
+      
+      {/* Notes Modal */}
+      <NotesModal
+        isOpen={showNotesModal}
+        onClose={() => setShowNotesModal(false)}
+        customerId={customer.id}
+        customerName={customer.name}
       />
     </>
   )

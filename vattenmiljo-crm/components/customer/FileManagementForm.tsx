@@ -87,7 +87,6 @@ export default function FileManagementForm({
       setLoading(true)
       setError(null)
 
-      console.log('🔄 FileManagement: Fetching files for customer:', customer.id)
 
       const response = await fetch(`/api/customers/${customer.id}/files`, {
         method: 'GET',
@@ -101,7 +100,6 @@ export default function FileManagementForm({
       }
 
       const data = await response.json()
-      console.log('✅ FileManagement: Files loaded:', data.files?.length || 0)
       
       setFiles(data.files || [])
     } catch (err) {
@@ -177,7 +175,6 @@ export default function FileManagementForm({
     setUploadProgress(initialProgress)
 
     try {
-      console.log('🔄 FileManagement: Starting upload of', fileArray.length, 'files')
 
       const uploadPromises = fileArray.map(async (file, index) => {
         try {
@@ -221,7 +218,6 @@ export default function FileManagementForm({
       const successfulUploads = results.filter((result): result is CustomerFile => result !== null)
 
       if (successfulUploads.length > 0) {
-        console.log('✅ FileManagement: Successfully uploaded', successfulUploads.length, 'files')
         
         // Update local files list
         setFiles(prev => [...prev, ...successfulUploads])
@@ -286,7 +282,6 @@ export default function FileManagementForm({
 
     try {
       setError(null)
-      console.log('🗑️ FileManagement: Deleting file:', fileId)
 
       const response = await fetch(`/api/customers/${customer.id}/files/${fileId}`, {
         method: 'DELETE',
@@ -299,7 +294,6 @@ export default function FileManagementForm({
         throw new Error(errorData.error || `Failed to delete file (${response.status})`)
       }
 
-      console.log('✅ FileManagement: File deleted successfully')
       
       // Remove file from local state
       setFiles(prev => prev.filter(file => file.id !== fileId))
@@ -312,7 +306,6 @@ export default function FileManagementForm({
 
   const downloadFile = async (file: CustomerFile) => {
     try {
-      console.log('⬇️ FileManagement: Downloading file:', file.fileName)
 
       const response = await fetch(`/api/customers/${customer.id}/files/${file.id}/download`, {
         method: 'GET',
@@ -335,7 +328,6 @@ export default function FileManagementForm({
       window.URL.revokeObjectURL(url)
       document.body.removeChild(a)
 
-      console.log('✅ FileManagement: File downloaded successfully')
 
     } catch (err) {
       console.error('💥 FileManagement: Error downloading file:', err)

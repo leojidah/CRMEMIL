@@ -87,7 +87,6 @@ export default function ActivityTimelineForm({
       setLoading(true)
       setError(null)
 
-      console.log('🔄 ActivityTimeline: Fetching activities for customer:', customer.id)
 
       const response = await fetch(`/api/customers/${customer.id}/activities`, {
         method: 'GET',
@@ -101,7 +100,6 @@ export default function ActivityTimelineForm({
       }
 
       const data = await response.json()
-      console.log('✅ ActivityTimeline: Activities loaded:', data.activities?.length || 0)
       
       setActivities(data.activities || [])
     } catch (err) {
@@ -122,7 +120,6 @@ export default function ActivityTimelineForm({
       setSubmitting(true)
       setError(null)
 
-      console.log('➕ ActivityTimeline: Adding new activity')
 
       const response = await fetch(`/api/customers/${customer.id}/activities`, {
         method: 'POST',
@@ -137,7 +134,6 @@ export default function ActivityTimelineForm({
       }
 
       const data = await response.json()
-      console.log('✅ ActivityTimeline: Activity added successfully')
 
       // Add activity to local state
       setActivities(prev => [data.activity, ...prev])

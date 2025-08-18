@@ -6,7 +6,6 @@ import React from 'react';
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import AuthProvider from '@/components/providers/AuthProvider';
-import DebugInfo from '@/components/DebugInfo';
 import './globals.css';
 
 // ============================================================================
@@ -286,18 +285,6 @@ export default function RootLayout({ children }: RootLayoutProps): JSX.Element {
           }}
         />
 
-        {/* Development Tools (only in development) */}
-        {process.env.NODE_ENV === 'development' && (
-          <div id="dev-tools" className="fixed top-4 right-4 z-40 max-w-xs">
-            <div className="space-y-0">
-              <div className="bg-gradient-to-r from-gray-900 to-gray-800 text-white px-3 py-1.5 rounded-t-lg text-xs font-mono font-medium border-b border-gray-700 flex items-center gap-2">
-                <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></div>
-                DEV
-              </div>
-              <DebugInfo />
-            </div>
-          </div>
-        )}
 
         {/* Structured Data for SEO */}
         <script

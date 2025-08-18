@@ -81,7 +81,6 @@ export default function CustomerDetailModal({
       setLoading(true)
       setError(null)
       
-      console.log('🔄 CustomerDetailModal: Fetching customer data for ID:', customerId)
       
       const response = await fetch(`/api/customers/${customerId}`, {
         method: 'GET',
@@ -95,7 +94,6 @@ export default function CustomerDetailModal({
       }
       
       const data = await response.json()
-      console.log('✅ CustomerDetailModal: Customer data loaded:', data.customer)
       
       setCustomer(data.customer)
     } catch (err) {
@@ -122,7 +120,6 @@ export default function CustomerDetailModal({
       setSaving(true)
       setError(null)
       
-      console.log('💾 CustomerDetailModal: Saving customer data')
       
       // Build update data - only include fields that can be updated
       const updateData: Partial<CustomerFormData> = {
@@ -153,7 +150,6 @@ export default function CustomerDetailModal({
       }
       
       const data = await response.json()
-      console.log('✅ CustomerDetailModal: Customer saved successfully')
       
       setCustomer(data.customer)
       setHasUnsavedChanges(false)

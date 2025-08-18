@@ -502,7 +502,6 @@ export const EnhancedDashboardClient: React.FC<DashboardClientProps> = ({ kpis, 
 
   const handleSearch = (e: React.FormEvent<HTMLFormElement>): void => {
     e.preventDefault();
-    console.log('Sökning:', searchQuery);
     // Implement search functionality
   };
 

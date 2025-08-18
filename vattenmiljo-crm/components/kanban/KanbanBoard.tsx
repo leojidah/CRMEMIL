@@ -113,31 +113,6 @@ export default function KanbanBoard({ userProfile }: KanbanBoardProps) {
     }
   }, [userProfile.role])
 
-  // DEBUG: Auth state logging
-  useEffect(() => {
-    console.log('🔍 DEBUG KanbanBoard: Component mounted/updated')
-    console.log('👤 DEBUG KanbanBoard: UserProfile:', userProfile)
-    console.log('🎭 DEBUG KanbanBoard: UserRole (converted):', userRole)
-    console.log('🍪 DEBUG KanbanBoard: Document cookies:', document.cookie)
-    
-    // Check if we have Supabase auth state
-    const supabaseAuth = localStorage.getItem('sb-wyxqyqlnzkgbigsfglou-auth-token')
-    console.log('🔐 DEBUG KanbanBoard: Supabase auth token in localStorage:', supabaseAuth ? 'Present' : 'Missing')
-    
-    if (supabaseAuth) {
-      try {
-        const parsed = JSON.parse(supabaseAuth)
-        console.log('🔑 DEBUG KanbanBoard: Auth token details:', {
-          hasAccessToken: !!parsed.access_token,
-          hasRefreshToken: !!parsed.refresh_token,
-          expiresAt: parsed.expires_at,
-          userEmail: parsed.user?.email
-        })
-      } catch (e) {
-        console.log('❌ DEBUG KanbanBoard: Failed to parse auth token:', e)
-      }
-    }
-  }, [userProfile, userRole])
 
   // Filtrera kolumner baserat på användarroll
   const visibleColumns = useMemo(() => {
@@ -163,15 +138,12 @@ export default function KanbanBoard({ userProfile }: KanbanBoardProps) {
   const fetchCustomers = async () => {
     try {
       setLoading(true)
-      console.log('🔄 KanbanBoard: Fetching customers...')
-      console.log('🔑 KanbanBoard: Access token available:', accessToken ? 'Yes' : 'No')
       
       const response = await fetch('/api/customers', {
         credentials: 'include', // Keep cookies as fallback
         headers: buildAuthHeaders(),
       })
       
-      console.log('📊 KanbanBoard: API response status:', response.status)
       
       if (!response.ok) {
         let errorData = {}
@@ -179,18 +151,15 @@ export default function KanbanBoard({ userProfile }: KanbanBoardProps) {
         
         try {
           rawResponse = await response.text()
-          console.log('📄 KanbanBoard: Raw error response:', rawResponse)
           
           if (rawResponse) {
             errorData = JSON.parse(rawResponse)
           }
         } catch (parseError) {
           console.error('❌ KanbanBoard: Failed to parse error response:', parseError)
-          console.log('📄 KanbanBoard: Raw response was:', rawResponse)
           errorData = { error: `HTTP ${response.status} - Invalid JSON response` }
         }
         
-        console.error('❌ KanbanBoard: API error:', errorData)
         
         // Build comprehensive error message
         let errorMessage = 'Failed to fetch customers'
@@ -208,10 +177,6 @@ export default function KanbanBoard({ userProfile }: KanbanBoardProps) {
       }
       
       const data = await response.json()
-      console.log('✅ KanbanBoard: Successfully received data:', {
-        customersCount: data.customers?.length || 0,
-        hasCustomers: Array.isArray(data.customers)
-      })
       
       setCustomers(data.customers || [])
       setError(null)
@@ -231,10 +196,8 @@ export default function KanbanBoard({ userProfile }: KanbanBoardProps) {
   // Only fetch customers when auth is ready and we have access token
   useEffect(() => {
     if (!authLoading && accessToken) {
-      console.log('🚀 KanbanBoard: Auth ready, fetching customers...')
       fetchCustomers()
     } else if (!authLoading && !accessToken) {
-      console.log('❌ KanbanBoard: No access token available, cannot fetch customers')
       setError('Autentisering krävs för att ladda kunder')
       setLoading(false)
     }
@@ -267,7 +230,6 @@ export default function KanbanBoard({ userProfile }: KanbanBoardProps) {
     try {
       setIsUpdating(true)
       setError(null) // Clear previous errors
-      console.log('🔄 KanbanBoard: Updating customer status...', { customerId, newStatus })
       
       const response = await fetch(`/api/customers/${customerId}`, {
         method: 'PATCH',
@@ -276,7 +238,6 @@ export default function KanbanBoard({ userProfile }: KanbanBoardProps) {
         body: JSON.stringify({ status: newStatus }),
       })
 
-      console.log('📊 KanbanBoard: Status update response:', response.status)
 
       if (!response.ok) {
         let errorData = {}
@@ -284,18 +245,15 @@ export default function KanbanBoard({ userProfile }: KanbanBoardProps) {
         
         try {
           rawResponse = await response.text()
-          console.log('📄 KanbanBoard: Raw error response:', rawResponse)
           
           if (rawResponse) {
             errorData = JSON.parse(rawResponse)
           }
         } catch (parseError) {
           console.error('❌ KanbanBoard: Failed to parse error response:', parseError)
-          console.log('📄 KanbanBoard: Raw response was:', rawResponse)
           errorData = { error: `HTTP ${response.status} - Invalid JSON response` }
         }
         
-        console.error('❌ KanbanBoard: Status update failed:', errorData)
         
         // Build comprehensive error message
         let errorMessage = 'Failed to update customer status'
@@ -313,7 +271,6 @@ export default function KanbanBoard({ userProfile }: KanbanBoardProps) {
       }
 
       const result = await response.json()
-      console.log('✅ KanbanBoard: Status updated successfully:', result)
 
       // Refresh data from server to ensure consistency
       await fetchCustomers()
@@ -348,7 +305,6 @@ export default function KanbanBoard({ userProfile }: KanbanBoardProps) {
         notes: 'Skapad via Kanban board'
       }
 
-      console.log('🔄 KanbanBoard: Creating new customer...', newCustomer)
 
       const response = await fetch('/api/customers', {
         method: 'POST',
@@ -357,7 +313,6 @@ export default function KanbanBoard({ userProfile }: KanbanBoardProps) {
         body: JSON.stringify(newCustomer),
       })
 
-      console.log('📊 KanbanBoard: Create customer response:', response.status)
 
       if (!response.ok) {
         let errorData = {}
@@ -365,18 +320,15 @@ export default function KanbanBoard({ userProfile }: KanbanBoardProps) {
         
         try {
           rawResponse = await response.text()
-          console.log('📄 KanbanBoard: Raw error response:', rawResponse)
           
           if (rawResponse) {
             errorData = JSON.parse(rawResponse)
           }
         } catch (parseError) {
           console.error('❌ KanbanBoard: Failed to parse error response:', parseError)
-          console.log('📄 KanbanBoard: Raw response was:', rawResponse)
           errorData = { error: `HTTP ${response.status} - Invalid JSON response` }
         }
         
-        console.error('❌ KanbanBoard: Create customer failed:', errorData)
         
         // Build comprehensive error message
         let errorMessage = 'Failed to create customer'
@@ -394,7 +346,6 @@ export default function KanbanBoard({ userProfile }: KanbanBoardProps) {
       }
 
       const result = await response.json()
-      console.log('✅ KanbanBoard: Customer created successfully:', result)
 
       // Refresh data to show new customer
       await fetchCustomers()
