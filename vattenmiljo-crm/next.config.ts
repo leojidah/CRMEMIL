@@ -15,10 +15,11 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   
-  // Experimentella features som kan behövas för Supabase
-  experimental: {
-    serverComponentsExternalPackages: ['@supabase/auth-helpers-nextjs'],
-  },
+  // UPPDATERAD SYNTAX för Next.js 15: Flyttat från experimental
+  serverExternalPackages: ['@supabase/auth-helpers-nextjs'],
+  
+  // Förhindra prerendering errors under build
+  output: 'standalone',
 }
 
 module.exports = nextConfig
