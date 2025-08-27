@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: vattenmiljo-crm
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: NEXTAUTH_SECRET
+        generateValue: true
+      - key: NEXTAUTH_URL
+        value: https://vattenmiljo-crm.onrender.com  # Ändra till din faktiska URL
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false  # Du måste lägga till dessa manuellt i dashboarden
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
